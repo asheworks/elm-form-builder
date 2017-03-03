@@ -1,0 +1,50 @@
+
+{
+  "name": "elm-form-builder-example",
+  "version": "1.0.0",
+  "description": "Example elm project to showcase Form Builder",
+	"author": "Perry Birch",
+  "license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/asheworks/elm-form-builder-example"
+	},
+  "main": "app.js",
+  "scripts": {
+    "build-css": "shx mkdir -p ./dist && elm-css Stylesheets.elm -o ./dist",
+    "start": "webpack-dev-server --content-base / --port 8000 --hot"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+		"autoprefixer": "6.6.1",
+    "clean-webpack-plugin": "0.1.15",
+    "compression-webpack-plugin": "0.3.2",
+    "copy-webpack-plugin": "4.0.1",
+		"css-loader": "0.26.1",
+		"elm": "0.18.0",
+    "elm-css": "0.6.0",
+    "elm-css-webpack-loader": "2.0.2",
+		"elm-hot-loader": "0.5.4",
+    "elm-test": "0.18.2",
+    "elm-webpack-loader": "4.2.0",
+		"extract-text-webpack-plugin": "1.0.1",
+    "file-loader": "0.9.0",
+    "font-awesome": "4.7.0",
+		"html-webpack-plugin": "2.26.0",
+    "jest-cli": "18.1.0",
+    "json-loader": "0.5.4",
+    "node-sass": "4.3.0",
+    "postcss-loader": "1.2.2",
+    "raw-loader": "0.5.1",
+    "rimraf": "2.5.4",
+    "sass-loader": "4.1.1",
+    "shx": "0.2.2",
+    "style-loader": "0.13.1",
+		"url-loader": "0.5.7",
+    "unminified-webpack-plugin": "1.2.0",
+    "webpack": "1.14.0",
+    "webpack-dev-server": "1.16.2",
+		"webpack-merge": "2.4.0"
+  }
+}
