@@ -13,6 +13,11 @@ commandMap form model command =
     BoolData_Update id value ->
       BoolData_Updated id value
 
+    TextData_Update id value ->
+      TextData_Updated id value
+
+    CheckboxData_Update (index, value) ->
+      CheckboxData_Updated (index, value)
     -- InputField_Update id value ->
     --   InputField_Updated id value
     
@@ -29,6 +34,12 @@ eventMap form model event =
     model_ = case event of
 
     BoolData_Updated id value ->
+      model
+
+    TextData_Updated id value ->
+      model
+
+    CheckboxData_Updated _ ->
       model
   in
     ( model, Nothing )

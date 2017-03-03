@@ -86,24 +86,19 @@ type DataTypes meta
   | TextData ( DataValue meta String )
 
 
--- type DataMods branch meta type_ = List ( DataModifiers branch (DataTypes meta) meta type_ )
-
 type DataFacts branch meta
   = Bool
       ( List ( DataModifiers branch (DataTypes meta) meta Bool ) )
       BoolControls
   | FileUpload
       ( List ( DataModifiers branch (DataTypes meta) meta ( List String ) ) )
-      -- ( DataModifiers branch (DataTypes meta) meta ( List String ) )
       FileUploadControls
   | Option
       ( List ( DataModifiers branch (DataTypes meta) meta ( Set String ) ) )
-      -- ( DataModifiers branch (DataTypes meta) meta ( Set String ) )
       ( List ( String, String ) )
       OptionControls
   | Text
       ( List ( DataModifiers branch (DataTypes meta) meta String ) )
-      -- ( DataModifiers branch (DataTypes meta) meta String )
       TextControls
 
 
@@ -144,3 +139,25 @@ toDataType meta node =
             applyLeafMods OptionData ( DataValue Nothing Nothing meta ) mods
           Text mods control ->
             applyLeafMods TextData ( DataValue Nothing Nothing meta ) mods
+
+
+
+-- getDataValue : DataTypes meta -> DataValue meta type_
+-- getDataValue data =
+--   case Debug.log "getDefault" data of
+--     BoolData value ->
+--       value
+--     ListStringData value ->
+--       value
+--     OptionData value ->
+--       value
+--     TextData value ->
+--       value
+
+
+-- getDefault : DataTypes meta -> type_
+-- getDefault data =
+--   getDataValue data
+--     |> .default
+
+      

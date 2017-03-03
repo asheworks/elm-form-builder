@@ -2,23 +2,7 @@ module FormBuilder exposing
   ( keepJusts
 
   , Id
---   , Title
-
---   , BoolControls(..)
-
---   , FileUploadControls(..)
-
---   , OptionControls(..)
-
---   , TextInputModel
---   , placeholder
---   , TextControls(..)
-
---   , BulletTypes(..)
---   , ContainerFacts(..)
   , DataValue
---   , DataTypes(..)
---   , DataFacts(..)
 
   , DataModifiers(..)
 
@@ -35,28 +19,267 @@ module FormBuilder exposing
   , toId
   , section
   , field
-
   , applyLeafMods
-
   , byId
+  , default
+  , toTree
+  , toForm
+  )
+
+
+import MultiwayTree exposing (..)
+import MultiwayTreeZipper exposing (..)
+
+
+--
+
+
+keepJusts : List (Maybe a) -> List a
+keepJusts list = 
+  case list of 
+    [] ->
+      []
+    mx :: xs ->
+      case mx of
+        Nothing ->
+          keepJusts xs
+          
+        Just x ->
+          x :: keepJusts xs
+
+
+type alias Id = String
+
+
+type alias DataValue meta type_ =
+  { default : Maybe type_
+  , value : Maybe type_
+  , meta : meta
+  }
+
+
+type DataModifiers branch leaf meta type_
+  = BranchMod ( branch -> branch )
+  | LeafMod ( leaf -> leaf )
+  | ValueMod ( DataValue meta type_ -> DataValue meta type_ )
+
+
+applyLeafMods : ( DataValue meta type_ -> leaf ) -> DataValue meta type_ -> List ( DataModifiers branch leaf meta type_ ) -> leaf
+applyLeafMods leafMap value mods =
+  List.foldr
+    (\ mod value_ ->
+        case mod of
+          LeafMod map ->
+            map value_
+          _ -> value_
+    )
+    ( List.foldr
+        (\ mod value_ ->
+            case mod of
+              ValueMod map ->
+                map value_
+              _ -> value_
+        )
+        value
+        mods
+        |> leafMap
+    ) mods
+
+
+type MetaModifiers branch leaf meta
+  = MetaMod ( meta -> meta )
+  | SectionMod ( SectionZipper branch leaf meta -> SectionZipper branch leaf meta )
+
+
+type alias MetaMods  branch leaf meta = List ( Tree ( Sections branch leaf meta ) -> MetaModifiers branch leaf meta )
+
+
+type alias SectionZipper  branch leaf meta = Zipper ( Sections branch leaf  meta )
+
+
+type alias Predicate  branch leaf meta = Zipper ( Sections branch leaf  meta ) -> Bool
+
+
+type alias Selector  branch leaf meta = Tree ( Sections branch leaf  meta ) -> SectionZipper branch leaf meta
+
+
+type Sections branch leaf meta
+  = Branch ( Maybe Id ) branch ( MetaMods branch leaf meta ) ( List ( Sections branch leaf meta ) )
+  | Leaf ( Maybe Id ) leaf ( MetaMods branch leaf meta )
+
+
+toId : String -> Maybe Id
+toId value =
+  if value == "" then
+    Nothing
+  else
+    Just value
+
+
+section : Id -> MetaMods branch leaf meta -> branch -> List ( Sections branch leaf meta ) -> Sections branch leaf meta
+section id mods container children =
+  Branch ( toId id ) container mods children
+
+
+field : Id -> MetaMods branch leaf meta -> leaf -> Sections branch leaf meta
+field id mods data =
+  Leaf ( toId id ) data mods
+
+
+type alias DataDim dim type_ =
+  { dim | default : Maybe type_
+        , value : Maybe type_
+  }
+
+
+default : type_ -> DataModifiers branch leaf meta type_
+default value =
+  ValueMod (\ model ->
+    { model | default = Just value }
+  )
+  
+
+toTree : Sections branch leaf meta -> Tree ( Sections branch leaf meta )
+toTree node =
+  case node of
+    Branch _ _ _ children ->
+      Tree node <| List.map toTree children
+
+    Leaf _ _ _ ->
+      Tree node []
+
+
+type alias DataNode branch leaf data meta =
+  { section : Zipper ( Sections branch leaf meta )
+  , path : String
+  , id : String
+  , data : Maybe ( data )
+  }
+
+
+type alias Form branch leaf data meta =
+  { def : Tree ( Sections branch leaf meta )
+  , data : Tree ( DataNode branch leaf data meta )
+  }
+
+
+appendPath : String -> Maybe ( String ) -> String
+appendPath path id =
+  case id of
+    Nothing -> path
+    Just id_ ->
+      if String.length path == 0 then
+        id_
+      else
+        path ++ "." ++ id_
+
+
+-- appendPath default path id =
+--   if String.length path == 0 then
+--     Maybe.withDefault default id
+--   else
+--     path ++ "." ++ Maybe.withDefault default id
+
+
+toDataNode
+    : Zipper (Sections branch leaf meta)
+    -> String
+    -> Maybe String
+    -> Maybe data
+    -> Forest (DataNode branch leaf data meta)
+    -> Tree (DataNode branch leaf data meta)
+toDataNode zipper path id dataType =
+  let
+    id_ = Maybe.withDefault "" id
+
+    path_ = appendPath path id
+  in
+    Tree ( DataNode zipper path_ id_ dataType )
+
+
+toDataTree :
+  ( meta -> ( Sections branch leaf meta ) -> Maybe data ) ->
+  meta ->
+  Tree ( Sections branch leaf meta ) ->
+  Tree ( DataNode branch leaf data meta )
+toDataTree dataTypeMap meta tree =
+  let
+    applyZipper path ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+      let
+        dataType = dataTypeMap meta node
+      in
+        case node of
+
+          Leaf id _ _ ->
+            toDataNode zipper path id dataType []
+            -- let
+            --   id_ = Maybe.withDefault "" id
+
+            --   path_ = appendPath path id_
+            
+            --   data_ = Tree ( DataNode zipper path_ id_ dataType ) []
+            -- in
+            --   data_
+
+            -- Tree ( DataNode zipper path_ id_ dataType ) []
+
+          Branch id _ _ _ ->
+            -- let
+            --   id_ = Maybe.withDefault "" id
+
+            --   path_ = appendPath path id_
+
+            --   data_ = Tree ( DataNode zipper path_ id_ dataType )
+            -- in
+              children
+                |> List.indexedMap
+                    (\ index _ ->
+                        goToChild index zipper
+                          |> Maybe.map ( applyZipper ( appendPath path id ) )
+                          -- |> Maybe.map ( applyZipper path_ )
+                    )
+                |> keepJusts
+                |> toDataNode zipper path id dataType
+                --|> data_
+  in
+    applyZipper "" ( tree, [] )
+
+
+toForm :
+  ( meta -> ( Sections branch leaf meta ) -> Maybe data ) ->
+  Sections branch leaf meta ->
+  meta ->
+  Form branch leaf data meta
+toForm dataTypeMap node meta =
+  let
+    tree : Tree (Sections branch leaf meta)
+    tree = toTree node
+
+    dataTree : Tree ( DataNode branch leaf data meta )
+    dataTree = toDataTree dataTypeMap meta tree
+  in
+    Form tree dataTree
+
+
+
+byId : String -> Tree (Sections branch leaf meta) -> Zipper (Sections branch leaf meta)
+byId key tree =
+  ( tree, [] )
+
+
+-- getDataValue : String -> DataValue meta
+-- getDataValue 
+
 --   , boolIs
 --   , visible
-  , default
-
-  , toTree
 
 --   , toDataType
-  , toForm
-
-  )
 
 -- import Dict exposing (..)
 -- import Html exposing (..)
-import MultiwayTree exposing (..)
-import MultiwayTreeZipper exposing (..)
+
 -- import Set exposing (..)
 
---
 
 
 -- type Command
@@ -131,22 +354,6 @@ import MultiwayTreeZipper exposing (..)
   --   ( model_, Nothing )
 
 
-keepJusts : List (Maybe a) -> List a
-keepJusts list = 
-  case list of 
-    [] ->
-      []
-    mx :: xs ->
-      case mx of
-        Nothing ->
-          keepJusts xs
-          
-        Just x ->
-          x :: keepJusts xs
-
-
-type alias Id = String
-
 
 -- type alias Title = String
 
@@ -202,11 +409,6 @@ type alias Id = String
 --   | List Title
 
 
-type alias DataValue meta type_ =
-  { default : Maybe type_
-  , value : Maybe type_
-  , meta : meta
-  }
 
 
 -- type DataTypes meta
@@ -223,32 +425,9 @@ type alias DataValue meta type_ =
 --   | Text ( DataMods meta String ) TextControls
 
 
-type DataModifiers branch leaf meta type_
-  = BranchMod ( branch -> branch )
-  | LeafMod ( leaf -> leaf )
-  | ValueMod ( DataValue meta type_ -> DataValue meta type_ )
 --   | TypeMod ( DataTypes meta -> DataTypes meta )
 
-applyLeafMods : ( DataValue meta type_ -> leaf ) -> DataValue meta type_ -> List ( DataModifiers branch leaf meta type_ ) -> leaf
-applyLeafMods leafMap value mods =
-  List.foldr
-    (\ mod value_ ->
-        case mod of
-          LeafMod map ->
-            map value_
-          _ -> value_
-    )
-    ( List.foldr
-        (\ mod value_ ->
-            case mod of
-              ValueMod map ->
-                map value_
-              _ -> value_
-        )
-        value
-        mods
-        |> leafMap
-    ) mods
+
 
 -- applyMods : ( DataValue meta type_ -> DataTypes meta ) -> DataValue meta type_ -> List ( DataModifiers meta type_ ) -> DataTypes meta
 -- applyMods typeMap value mods =
@@ -271,85 +450,21 @@ applyLeafMods leafMap value mods =
 --         |> typeMap
 --     ) mods
 
-type MetaModifiers branch leaf meta
-  = MetaMod ( meta -> meta )
-  | SectionMod ( SectionZipper branch leaf meta -> SectionZipper branch leaf meta )
 
 
 -- type alias DataMods branch leaf meta type_ = List ( DataModifiers branch leaf meta type_ )
 
-type alias MetaMods  branch leaf meta = List ( Tree ( Sections branch leaf meta ) -> MetaModifiers branch leaf meta )
 
 
-type alias SectionZipper  branch leaf meta = Zipper ( Sections branch leaf  meta )
-
-
-type alias Predicate  branch leaf meta = Zipper ( Sections branch leaf  meta ) -> Bool
-
-
-type alias Selector  branch leaf meta = Tree ( Sections branch leaf  meta ) -> SectionZipper branch leaf meta
-
-
-type Sections branch leaf meta
-  = Branch ( Maybe Id ) branch ( MetaMods branch leaf meta ) ( List ( Sections branch leaf meta ) )
-  | Leaf ( Maybe Id ) leaf ( MetaMods branch leaf meta )
-
-
-toId : String -> Maybe Id
-toId value =
-  if value == "" then
-    Nothing
-  else
-    Just value
-
-
-section : Id -> MetaMods branch leaf meta -> branch -> List ( Sections branch leaf meta ) -> Sections branch leaf meta
-section id mods container children =
-  Branch ( toId id ) container mods children
-
-
-field : Id -> MetaMods branch leaf meta -> leaf -> Sections branch leaf meta
-field id mods data =
-  Leaf ( toId id ) data mods
-
-
-byId : String -> Tree (Sections branch leaf meta) -> Zipper (Sections branch leaf meta)
-byId key tree =
-  ( tree, [] )
-
-
-type alias DataDim dim type_ =
-  { dim | default : Maybe type_
-        , value : Maybe type_
-  }
-
-
-default : type_ -> DataModifiers branch leaf meta type_
-default value =
-  ValueMod (\ model ->
-    { model | default = Just value }
-  )
-  
-
-toTree : Sections branch leaf meta -> Tree ( Sections branch leaf meta )
-toTree node =
-  case node of
-    Branch _ _ _ children ->
-      Tree node <| List.map toTree children
-
-    Leaf _ _ _ ->
-      Tree node []
-
-
-type alias DataNode branch leaf data meta =
-  { section : Zipper ( Sections branch leaf meta )
-  , path : String
-  , id : String
-  , data : Maybe ( data )
-  -- , form : Zipper ( FormNode meta )
-  -- , view : Maybe ( Zipper ( ViewNode meta ) )
-  -- , data : Maybe ( DataTypes meta )
-  }
+-- type alias DataNode branch leaf data meta =
+--   { section : Zipper ( Sections branch leaf meta )
+--   , path : String
+--   , id : String
+--   , data : Maybe ( data )
+--   -- , form : Zipper ( FormNode meta )
+--   -- , view : Maybe ( Zipper ( ViewNode meta ) )
+--   -- , data : Maybe ( DataTypes meta )
+--   }
 
 
 -- type alias ViewNode branch leaf meta =
@@ -362,14 +477,18 @@ type alias DataNode branch leaf data meta =
 --   }
 
 
-type alias Form branch leaf data meta =
-  { def : Tree ( Sections branch leaf meta )
-  -- , form : Tree ( FormNode meta )
-  , data : Tree ( DataNode branch leaf data meta )
-  -- , view : Tree ( ViewNode branch leaf meta )
-  -- , view : Html Command
+
+-- type alias Form branch leaf data meta =
+--   { def : Tree ( Sections branch leaf meta )
+--   -- , form : Tree ( FormNode meta )
+--   , data : Tree ( DataNode branch leaf data meta )
+--   -- , view : Tree ( ViewNode branch leaf meta )
+--   -- , view : Html Command
   
-  }
+--   }
+
+
+
 
 -- applyMods : ( DataValue meta type_ -> DataTypes meta ) -> DataValue meta type_ -> List ( DataModifiers meta type_ ) -> DataTypes meta
 -- applyMods typeMap value mods =
@@ -393,70 +512,4 @@ type alias Form branch leaf data meta =
 --     ) mods
 
 
-appendPath : String -> String -> String
-appendPath path id =
-  if String.length path == 0 then
-    id
-  else
-    path ++ "." ++ id
 
-
-toDataTree :
-  ( meta -> ( Sections branch leaf meta ) -> Maybe data ) ->
-  meta ->
-  Tree ( Sections branch leaf meta ) ->
-  Tree ( DataNode branch leaf data meta )
-toDataTree dataTypeMap meta tree =
-  let
-    applyZipper path ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
-      let
-        dataType = dataTypeMap meta node
-      in
-        case node of
-
-          Leaf id _ _ ->
-            let
-              id_ = Maybe.withDefault "" id
-
-              path_ = appendPath path id_
-            
-              data_ = Tree ( DataNode zipper path_ id_ dataType ) []
-            in
-              data_
-
-          Branch id _ _ _ ->
-            let
-              id_ = Maybe.withDefault "" id
-
-              path_ = appendPath path id_
-
-              data_ = Tree ( DataNode zipper path_ id_ dataType )
-            in
-              children
-                |> List.indexedMap
-                    (\ index _ ->
-                        goToChild index zipper
-                          |> Maybe.map ( applyZipper path_ )
-                    )
-                |> keepJusts
-                |> data_
-  in
-    applyZipper "" ( tree, [] )
-
-
-toForm :
-  ( meta -> ( Sections branch leaf meta ) -> Maybe data ) ->
-  Sections branch leaf meta ->
-  meta ->
-  Form branch leaf data meta
-toForm dataTypeMap node meta =
-  let
-    tree : Tree (Sections branch leaf meta)
-    tree = toTree node
-
-    dataTree : Tree ( DataNode branch leaf data meta )
-    dataTree = toDataTree dataTypeMap meta tree
-
-    -- view = toView meta tree
-  in
-    Form tree dataTree-- view
