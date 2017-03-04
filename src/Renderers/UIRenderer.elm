@@ -6,6 +6,7 @@ import FormBuilder exposing (..)
 import FormBuilder.Model exposing (..)
 import Renderers.Model exposing (..)
 
+import Char exposing (..)
 import Dict exposing (..)
 import Html exposing (..)
 import Html.Attributes as Attr
@@ -49,25 +50,13 @@ render form =
   in
     applyZipper 0 0 ( form.def, [] )
 
-  -- MultiwayTree.foldl
-  --   (\ node children ->
-  --     case node of
-  --       Branch _ _ _ _ ->
-  --         [ renderNode node children ]
-  --       Leaf _ _ _ ->
-  --         children ++ [ renderNode node [] ]
-  --   )
-  --   []
-  --   form.def
-  --   |> div []
-
 
 renderNode
   : Form ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta
   -> Zipper ( Sections ContainerFacts (DataFacts ContainerFacts meta) meta )
   -> List ( Html Command )
   -> Html Command
-renderNode form ( ( ( Tree node children_ ) as subtree ), crumbs ) children =
+renderNode form ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
       case node of
         Branch id container mods_ _ ->
           let
@@ -76,10 +65,11 @@ renderNode form ( ( ( Tree node children_ ) as subtree ), crumbs ) children =
             case container of
 
               BulletList types title ->
-                header id_ title children
+                bullets id_ title zipper children
 
               Grid ->
-                grid id_ "grid" children
+                grid id_ "" children
+
               Header title ->
                 header id_ title children
 
@@ -87,7 +77,7 @@ renderNode form ( ( ( Tree node children_ ) as subtree ), crumbs ) children =
                 header id_ title children
 
               OrderedList title ->
-                header id_ title children
+                orderedList id_ title False children
 
 
         Leaf id leaf mods_ ->
@@ -100,9 +90,9 @@ renderNode form ( ( ( Tree node children_ ) as subtree ), crumbs ) children =
                 bool id_
 
               FileUpload mods control ->
-                let
-                  t = Debug.log "FileUpload" control
-                in
+                -- let
+                --   t = Debug.log "FileUpload" control
+                -- in
                   div [] [ Html.text <| "FileUpload: " ++ id_ ]
 
               Option mods values control ->
@@ -111,7 +101,7 @@ renderNode form ( ( ( Tree node children_ ) as subtree ), crumbs ) children =
               Text mods control ->
                 case control of
                   TextInput title ctrlMods ->
-                    textInput id_ title False ""
+                    textInput id_ title "" False
 
                   TextLabel title ->
                     textLabel id_ title "" False
@@ -127,6 +117,57 @@ bool id =
     , onChange = BoolData_Update
     }
 
+
+bullets
+  : String
+  -> String
+  -> Zipper ( Sections ContainerFacts (DataFacts ContainerFacts meta) meta )
+  -> List ( Html Command )
+  -> Html Command
+bullets id title zipper children =
+  div
+    [ styles
+        [ paddingLeft (px 15)
+        , marginTop (px 20)
+        , marginBottom (px 20)
+        , borderLeft3 (px 1) solid (rgba 128 128 128 0.1)
+        ]
+    ]
+    [ span
+        [ styles
+            [ displayFlex
+            -- , paddingRight (px 10)
+            , paddingBottom (px 5)
+            -- , fontSize (Css.em 1.3)
+            , borderBottom3 (px 1) solid (rgba 128 128 128 0.3)
+            ]
+        ]
+        [ span
+          [ styles
+              [ paddingRight (px 10)
+              , fontSize (Css.em 1.3)
+              , fontWeight bold
+              ]
+          ]
+          [ Html.text <| (bulletString zipper) --++ " - "
+          ]
+        , span
+          [ styles
+              [ flex (int 1)
+              , fontSize (Css.em 1.3)
+              ]
+          ]
+          [ Html.text title
+          ]
+        ]
+    , div
+        [ styles
+            [ paddingTop (px 20)
+            , paddingLeft (px 10)
+            ]
+        ]
+        children
+    ]
 
 checkbox : String -> Dict String String -> Html Command
 checkbox id options =
@@ -147,7 +188,11 @@ checkbox id options =
     }
 
 
-grid : String -> String -> List (Html Command) -> Html Command
+grid
+  : String
+  -> String
+  -> List (Html Command)
+  -> Html Command
 grid id title children =
   UI.FieldLabel.view
     { id = id
@@ -185,7 +230,11 @@ grid id title children =
     ]
 
 
-header : String -> String -> List (Html Command) -> Html Command
+header
+  : String
+  -> String
+  -> List ( Html Command )
+  -> Html Command
 header id title children =
   UI.formControl
     { id = id
@@ -198,8 +247,48 @@ header id title children =
     }
 
 
-textInput : String -> String -> Bool -> String -> Html Command
-textInput id label error placeholder =
+orderedList
+  : String
+  -> String
+  -> Bool
+  -> List ( Html Command )
+  -> Html Command
+orderedList id title error children =
+  UI.FieldLabel.view
+    { id = id
+    , label = title
+    , error = error
+    }
+    [ div
+        [ styles
+          [ displayFlex
+          , flex (int 1)
+          , flexDirection column
+          , display block
+          ]
+        ] <|
+        List.map (\child ->
+            div
+              [ styles
+                  [ float left
+                  , displayFlex
+                  , width (pct 100)
+                  ]
+              ]
+              [ span
+                  [ styles
+                      [ padding (px 10)
+                      , width (pct 100)
+                      ]
+                  ]
+                  [ child
+                  ]
+              ]
+          ) children
+    ]
+
+textInput : String -> String -> String -> Bool -> Html Command
+textInput id label placeholder error =
   UI.FieldLabel.view
     { id = id
     , label = label
@@ -230,3 +319,80 @@ textLabel id label text error =
         [ Html.text text
         ]
     ]
+
+
+bulletString
+  -- : Zipper ( ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta )
+  : Zipper ( Sections ContainerFacts (DataFacts ContainerFacts meta) meta )
+  -> String
+bulletString ctx =
+  let
+    countPrevZipper ( ( alpha, numeric ) as count ) ( ( subtree, crumbs ) as zipper ) =
+      case goLeft zipper of
+        Nothing -> count
+        Just ( ( ( ( Tree node children ) as subtree_ ), crumbs_ ) as prev ) ->
+          let
+            count_ = case node of
+            -- count_ = case subtree_ of
+            --   Tree datum _ ->
+
+            --     case datum of
+                  Branch _ container _ _ ->
+
+                    case container of
+                      BulletList types _ ->
+
+                        -- case def.type_ of
+                        case types of
+                          AlphaBullets -> (alpha + 1, numeric)
+                          NumericBullets -> (alpha, numeric + 1)
+
+                      _ -> count
+
+                  _ -> count
+            
+          in
+            countPrevZipper count_ prev
+
+    bulletStringZipper depth ( ( ( ( Tree node children ) as subtree ), crumbs ) as zipper ) =
+
+      -- case subtree of
+      --   Tree datum _ ->
+
+          case node of
+            -- Branch branch ->
+            Branch _ container _ _ ->
+              case container of
+                BulletList types _ ->
+              -- case branch of
+              --   Bullets def _ ->
+                  let
+                    (alpha, numeric) = countPrevZipper (0, 0) zipper
+                  in
+                    -- case def.type_ of
+                    case types of
+                      AlphaBullets -> String.fromChar <| fromCode (alpha + 65)
+                      NumericBullets -> (toString <| numeric + 1)
+                
+                _ -> ""
+
+            _ -> ""
+
+    applyZipper depth label ( ( subtree, crumbs ) as zipper ) =
+      let
+        bulletLabel = (bulletStringZipper depth zipper)
+        label_ = bulletLabel ++
+          if label == "" then
+            ""
+          else
+            if String.startsWith "." label then
+              label
+            else
+              "." ++ label
+      in
+        case goUp zipper of
+          Nothing -> label
+          Just parent ->
+              applyZipper (depth + 1) label_ parent
+  in
+    applyZipper 0 "" ctx

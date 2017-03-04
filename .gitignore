@@ -4,6 +4,7 @@ elm-stuff/
 node_modules/
 tests/elm-stuff/
 
+npm-debug.log
 credentials.js
 
 Questionnaire.elm
