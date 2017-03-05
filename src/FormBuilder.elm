@@ -15,6 +15,10 @@ module FormBuilder exposing
   , Sections(..)
 
   , Form
+  , ZipperState
+  , zipperState
+  , sectionZipper
+  , applyZipper
   
   , toId
   , section
@@ -158,20 +162,6 @@ toTree node =
       Tree node []
 
 
-type alias DataNode branch leaf data meta =
-  { section : Zipper ( Sections branch leaf meta )
-  , path : String
-  , id : String
-  , data : Maybe ( data )
-  }
-
-
-type alias Form branch leaf data meta =
-  { def : Tree ( Sections branch leaf meta )
-  , data : Tree ( DataNode branch leaf data meta )
-  }
-
-
 appendPath : String -> Maybe ( String ) -> String
 appendPath path id =
   case id of
@@ -183,49 +173,174 @@ appendPath path id =
         path ++ "." ++ id_
 
 
+type alias DataNode branch leaf data meta =
+  { section : Zipper ( Sections branch leaf meta )
+  , path : String
+  , id : String
+  , data : Maybe ( data )
+  }
+
+
+-- toDataNode
+--   : Zipper ( Sections branch leaf meta )
+--   -> String
+--   -> Maybe String
+--   -> Maybe data
+--   -> Forest (DataNode branch leaf data meta)
+--   -> Tree (DataNode branch leaf data meta)
+-- toDataNode zipper path id dataType =
+--   let
+--     id_ = Maybe.withDefault "" id
+
+--     path_ = appendPath path id
+--   in
+--     Tree ( DataNode zipper path_ id_ dataType )
+
+
+-- toDataTree
+--   : ( meta -> ( Sections branch leaf meta ) -> Maybe data )
+--   -> meta
+--   -> Tree ( Sections branch leaf meta )
+--   -> Tree ( DataNode branch leaf data meta )
+-- toDataTree dataTypeMap meta tree =
+--   let
+--     applyZipper path ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+--       let
+--         dataType = dataTypeMap meta node
+--       in
+--         case node of
+
+--           Leaf id _ _ ->
+--             toDataNode zipper path id dataType []
+
+--           Branch id _ _ _ ->
+--               children
+--                 |> List.indexedMap
+--                     (\ index _ ->
+--                         goToChild index zipper
+--                           |> Maybe.map ( applyZipper ( appendPath path id ) )
+--                     )
+--                 |> keepJusts
+--                 |> toDataNode zipper path id dataType
+--   in
+--     applyZipper "" ( tree, [] )
+
+
+type alias Form branch leaf data meta =
+  { def : Tree ( Sections branch leaf meta )
+  , data : Tree ( DataNode branch leaf data meta )
+  }
+
+
+-- type alias ControlNode branch leaf data meta =
+--   { section : Zipper ( Sections branch leaf meta )
+--   , path : String
+--   , id : String
+--   , 
+--   }
+
+-- toControlNode
+--   : Zipper ( Sections branch leaf meta )
+--   -> String
+--   -> Maybe String
+--   -> Maybe data
+--   -> Forest (DataNode branch leaf data meta)
+--   -> Tree (DataNode branch leaf data meta)
+-- toControlNode zipper path id control =
+
+
+
+-- type alias RenderMeta meta =
+--   { dataTypeMap : ( meta -> ( Sections branch leaf meta ) -> Maybe data )
+--   , meta : meta
+--   , depth : Int
+--   , index : Int
+--   , path : String
+--   }
+
+
+-- render
+--   : ( meta -> ( Sections branch leaf meta ) -> Maybe data )
+--   -> meta
+--   -> Tree ( Sections branch leaf meta )
+--   -> Tree ( DataNode branch leaf data meta )
+-- render dataTypeMap meta tree =
+--   renderZipper
+--     { dataTypeMap = dataTypeMap
+--     , meta = meta
+--     , depth = 0
+--     , index = 0
+--     , path = ""
+--     }
+--     ( tree, [] )
+
+
+type alias ZipperState =
+  { depth : Int
+  , index : Int
+  , path : String
+  }
+
+
+zipperState : ZipperState
+zipperState =
+  ZipperState 0 0 ""
+
+
 toDataNode
-    : Zipper (Sections branch leaf meta)
-    -> String
-    -> Maybe String
-    -> Maybe data
-    -> Forest (DataNode branch leaf data meta)
-    -> Tree (DataNode branch leaf data meta)
-toDataNode zipper path id dataType =
+  : ( meta -> ( Sections branch leaf meta ) -> Maybe data )
+  -> meta
+  -> ZipperState
+  -> Maybe String
+  -> Zipper ( Sections branch leaf meta )
+  -> Forest ( DataNode branch leaf data meta ) -- aka List ( DataNode branch leaf data meta )
+  -> Tree ( DataNode branch leaf data meta )
+toDataNode dataTypeMap meta state id ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
   let
     id_ = Maybe.withDefault "" id
 
-    path_ = appendPath path id
+    path_ = appendPath state.path id
+
+    dataType = dataTypeMap meta node
   in
     Tree ( DataNode zipper path_ id_ dataType )
 
 
-toDataTree
-  : ( meta -> ( Sections branch leaf meta ) -> Maybe data )
-  -> meta
+applyZipper
+  : ( ZipperState -> Maybe String -> Zipper ( Sections branch leaf meta ) -> List type_ -> type_ )
   -> Tree ( Sections branch leaf meta )
-  -> Tree ( DataNode branch leaf data meta )
-toDataTree dataTypeMap meta tree =
-  let
-    applyZipper path ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
-      let
-        dataType = dataTypeMap meta node
-      in
-        case node of
+  -> type_
+applyZipper mapper tree =
+  sectionZipper zipperState mapper ( tree, [] )
 
-          Leaf id _ _ ->
-            toDataNode zipper path id dataType []
 
-          Branch id _ _ _ ->
-              children
-                |> List.indexedMap
-                    (\ index _ ->
-                        goToChild index zipper
-                          |> Maybe.map ( applyZipper ( appendPath path id ) )
-                    )
-                |> keepJusts
-                |> toDataNode zipper path id dataType
-  in
-    applyZipper "" ( tree, [] )
+sectionZipper
+  : ZipperState
+  -> ( ZipperState -> Maybe String -> Zipper ( Sections branch leaf meta ) -> List ( type_ ) -> type_ )
+  -> Zipper ( Sections branch leaf meta )
+  -> type_
+sectionZipper state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+  case node of
+    Leaf id _ _ ->
+      mapper state id zipper []
+      
+    Branch id _ _ _ ->
+      children
+        |> List.indexedMap
+            (\ index _ ->
+                goToChild index zipper
+                  |> Maybe.map
+                      ( sectionZipper
+                          { state
+                              | depth = state.depth + 1
+                              , index = index
+                              , path = appendPath state.path id
+                          }
+                          mapper
+                      )
+            )
+        |> keepJusts
+        |> mapper state id zipper
 
 
 toForm
@@ -240,7 +355,14 @@ toForm dataTypeMap node meta =
     tree = toTree node
 
     dataTree : Tree ( DataNode branch leaf data meta )
-    dataTree = toDataTree dataTypeMap meta tree
+    dataTree = applyZipper ( toDataNode dataTypeMap meta ) tree
+
+    -- dataTree =
+    --   sectionZipper
+    --     zipperState
+    --     ( toDataNode dataTypeMap meta )
+    --     ( tree, [] )
+    -- dataTree = toDataTree dataTypeMap meta tree
   in
     Form tree dataTree
 

@@ -28,37 +28,44 @@ styles =
     asPairs >> Attr.style
 
 
+-- render
+--   : Form ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta
+--   -> Html Command
+-- render form =
+--   let
+--     applyZipper depth index ( ( ( ( Tree node children ) as subtree ), crumbs ) as zipper ) =
+--       case node of  
+--         Leaf _ _ _ ->
+--           renderNode form zipper []
+
+--         Branch _ _ _ _ ->
+--           children
+--             |> List.indexedMap
+--                 (\ index_ _ ->
+--                     goToChild index_ zipper
+--                       |> Maybe.map ( applyZipper ( depth + 1 ) index_ )
+--                 )
+--             |> keepJusts
+--             |> renderNode form zipper
+--   in
+--     applyZipper 0 0 ( form.def, [] )
+
 render
-  : Form ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta
+  : Form ContainerFacts (DataFacts ContainerFacts meta) data meta
   -> Html Command
 render form =
-  let
-    applyZipper depth index ( ( ( ( Tree node children ) as subtree ), crumbs ) as zipper ) =
-      case node of  
-        Leaf _ _ _ ->
-          renderNode form zipper []
-
-        Branch _ _ _ _ ->
-          children
-            |> List.indexedMap
-                (\ index_ _ ->
-                    goToChild index_ zipper
-                      |> Maybe.map ( applyZipper ( depth + 1 ) index_ )
-                )
-            |> keepJusts
-            |> renderNode form zipper
-  in
-    applyZipper 0 0 ( form.def, [] )
+  applyZipper renderNode form.def
 
 
 renderNode
-  : Form ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta
+  : ZipperState
+  -> Maybe String
   -> Zipper ( Sections ContainerFacts (DataFacts ContainerFacts meta) meta )
   -> List ( Html Command )
   -> Html Command
-renderNode form ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
+renderNode state id ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
       case node of
-        Branch id container mods_ _ ->
+        Branch _ container mods_ _ ->
           let
             id_ = Maybe.withDefault "" id
           in
@@ -80,7 +87,7 @@ renderNode form ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper )
                 orderedList id_ title False children
 
 
-        Leaf id leaf mods_ ->
+        Leaf _ leaf mods_ ->
           let
             id_ = Maybe.withDefault "" id
           in
@@ -105,6 +112,62 @@ renderNode form ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper )
 
                   TextLabel title ->
                     textLabel id_ title "" False
+
+
+-- renderNode
+--   : Form ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta
+--   -> Zipper ( Sections ContainerFacts (DataFacts ContainerFacts meta) meta )
+--   -> List ( Html Command )
+--   -> Html Command
+-- renderNode form ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
+--       case node of
+--         Branch id container mods_ _ ->
+--           let
+--             id_ = Maybe.withDefault "" id
+--           in
+--             case container of
+
+--               BulletList types title ->
+--                 bullets id_ title zipper children
+
+--               Grid ->
+--                 grid id_ "" children
+
+--               Header title ->
+--                 header id_ title children
+
+--               LabeledSection title ->
+--                 header id_ title children
+
+--               OrderedList title ->
+--                 orderedList id_ title False children
+
+
+--         Leaf id leaf mods_ ->
+--           let
+--             id_ = Maybe.withDefault "" id
+--           in
+--             case leaf of
+
+--               Bool mods control ->
+--                 bool id_
+
+--               FileUpload mods control ->
+--                 -- let
+--                 --   t = Debug.log "FileUpload" control
+--                 -- in
+--                   div [] [ Html.text <| "FileUpload: " ++ id_ ]
+
+--               Option mods values control ->
+--                 checkbox id_ ( Dict.fromList [ ( "one", "one" ) ] )
+
+--               Text mods control ->
+--                 case control of
+--                   TextInput title ctrlMods ->
+--                     textInput id_ title "" False
+
+--                   TextLabel title ->
+--                     textLabel id_ title "" False
 
 
 bool : String -> Html Command
@@ -287,7 +350,12 @@ orderedList id title error children =
           ) children
     ]
 
-textInput : String -> String -> String -> Bool -> Html Command
+textInput
+  : String
+  -> String
+  -> String
+  -> Bool
+  -> Html Command
 textInput id label placeholder error =
   UI.FieldLabel.view
     { id = id
@@ -306,7 +374,12 @@ textInput id label placeholder error =
     ]
 
 
-textLabel : String -> String -> String-> Bool -> Html Command
+textLabel
+  : String
+  -> String
+  -> String
+  -> Bool
+  -> Html Command
 textLabel id label text error =
   UI.FieldLabel.view
     { id = id
@@ -322,7 +395,6 @@ textLabel id label text error =
 
 
 bulletString
-  -- : Zipper ( ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta )
   : Zipper ( Sections ContainerFacts (DataFacts ContainerFacts meta) meta )
   -> String
 bulletString ctx =
@@ -333,50 +405,37 @@ bulletString ctx =
         Just ( ( ( ( Tree node children ) as subtree_ ), crumbs_ ) as prev ) ->
           let
             count_ = case node of
-            -- count_ = case subtree_ of
-            --   Tree datum _ ->
+              Branch _ container _ _ ->
 
-            --     case datum of
-                  Branch _ container _ _ ->
+                case container of
+                  BulletList types _ ->
 
-                    case container of
-                      BulletList types _ ->
-
-                        -- case def.type_ of
-                        case types of
-                          AlphaBullets -> (alpha + 1, numeric)
-                          NumericBullets -> (alpha, numeric + 1)
-
-                      _ -> count
+                    case types of
+                      AlphaBullets -> (alpha + 1, numeric)
+                      NumericBullets -> (alpha, numeric + 1)
 
                   _ -> count
+
+              _ -> count
             
           in
             countPrevZipper count_ prev
 
     bulletStringZipper depth ( ( ( ( Tree node children ) as subtree ), crumbs ) as zipper ) =
-
-      -- case subtree of
-      --   Tree datum _ ->
-
-          case node of
-            -- Branch branch ->
-            Branch _ container _ _ ->
-              case container of
-                BulletList types _ ->
-              -- case branch of
-              --   Bullets def _ ->
-                  let
-                    (alpha, numeric) = countPrevZipper (0, 0) zipper
-                  in
-                    -- case def.type_ of
-                    case types of
-                      AlphaBullets -> String.fromChar <| fromCode (alpha + 65)
-                      NumericBullets -> (toString <| numeric + 1)
-                
-                _ -> ""
-
+      case node of
+        Branch _ container _ _ ->
+          case container of
+            BulletList types _ ->
+              let
+                (alpha, numeric) = countPrevZipper (0, 0) zipper
+              in
+                case types of
+                  AlphaBullets -> String.fromChar <| fromCode (alpha + 65)
+                  NumericBullets -> (toString <| numeric + 1)
+            
             _ -> ""
+
+        _ -> ""
 
     applyZipper depth label ( ( subtree, crumbs ) as zipper ) =
       let
