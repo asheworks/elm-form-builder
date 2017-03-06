@@ -4,40 +4,60 @@ import Html exposing (..)
 
 --
 
-import FormBuilderExample.InfoSec as FormBuilder
+-- import FormBuilderExample.InfoSec as FormBuilder
 
 --
-import FormBuilderExample.Style exposing (..)
+-- import FormBuilderExample.Style exposing (..)
 import FormBuilderExample.Model exposing (Command(..), Model)
 
 --
 
-import FormBuilder as FormBuilder
+-- import FormBuilder as FormBuilder
 
-import Renderers.Model exposing (..)
+-- import Renderers.Model as Renderers
 import Renderers.UIRenderer exposing (..)
 
 --
 
-{ id, class, classList } =
-    cssNamespace
+-- { id, class, classList } =
+--     cssNamespace
 
 --
 
+
 view : Model -> Html Command
 view model =
-  let
-    meta =
-      { visible = False
-      }
+  Html.map FormBuilder_Command ( render model.formBuilder.state.form.state )
 
-    form =
-      FormBuilder.toForm
-      toDataType
-      FormBuilder.infosec
-      meta
-  in
-    Html.map FormBuilder_Command ( render form )
+
+-- let
+--   meta =
+--     { visible = False
+--     }
+
+--   form =
+--     FormBuilder.toForm
+--     toDataType
+--     FormBuilder.infosec
+--     meta
+-- in
+  -- Html.map FormBuilder_Command ( render model.formBuilder.state.form.state )
+
+
+-- view : Model -> Html Command
+-- view model =
+--   let
+--     meta =
+--       { visible = False
+--       }
+
+--     form =
+--       FormBuilder.toForm
+--       toDataType
+--       FormBuilder.infosec
+--       meta
+--   in
+--     Html.map FormBuilder_Command ( render form )
 
 
 -- import Example.FormBuilder2 as FB2

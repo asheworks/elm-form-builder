@@ -13,14 +13,15 @@ module FormBuilderExample.Model
 
 --
 
-import FormBuilderExample.InfoSec exposing (..)
+import CQRS exposing (State)
 
 import FormBuilder exposing (..)
-import FormBuilder.Model as FormBuilder
+-- import FormBuilder.Model as FormBuilder
 
-import Renderers.Model exposing (..)
+import Renderers.Model as FormBuilder
+--exposing (..)
 
--- import CQRS exposing (State)
+import FormBuilderExample.InfoSec exposing (..)
 
 --
 
@@ -30,62 +31,77 @@ import Renderers.Model exposing (..)
 --
 
 type alias ContextValues =
-    {}
+  {}
 
 
 type alias Context =
-    Maybe ContextValues
+  Maybe ContextValues
 
 
 type alias Meta =
-    { visible : Bool
-    }
+  { visible : Bool
+  }
 
 type alias Model =
-    { form : Form ContainerFacts ( DataFacts ContainerFacts Meta ) ( DataTypes Meta ) Meta
-         --questionnaire : State Questionnaire.SampleData
-    }
+  { formBuilder : State (
+      FormBuilder.Model
+        FormBuilder.ContainerFacts
+        ( FormBuilder.DataFacts FormBuilder.ContainerFacts Meta )
+        ( FormBuilder.DataTypes Meta )
+        Meta
+    )
+  }
+
+    -- { form : State ( Form ContainerFacts ( DataFacts ContainerFacts Meta ) ( DataTypes Meta ) Meta )
+    --      --questionnaire : State Questionnaire.SampleData
+    -- }
 
 
 type Command
-    = FormBuilder_Command FormBuilder.Command
+  = FormBuilder_Command FormBuilder.Command
+
 
 type Event
-    = FormBuilder_Event FormBuilder.Event
-    | Temp
+  = FormBuilder_Event FormBuilder.Event
 
 
 type Effect
-    = FormBuilder_Effect FormBuilder.Effect
+  = FormBuilder_Effect FormBuilder.Effect
     
 
 mapContext : Context -> Model
 mapContext context =
-    Maybe.withDefault
-        {}
-        context
-        |> mapValues
+  Maybe.withDefault
+    {}
+    context
+    |> mapValues
 
 
 mapValues : ContextValues -> Model
 mapValues values =
-    defaultModel
+  defaultModel
 
 
 defaultModel : Model
 defaultModel =
-  let
-    meta =
+  { formBuilder = State <| FormBuilder.defaultModel
+      FormBuilder.toDataType
+      infosec
       { visible = False
       }
+  }
+  -- let
+  --   meta =
+  --     { visible = False
+  --     }
 
-    form =
-      FormBuilder.toForm
-      toDataType
-      infosec
-      meta
-  in
-    { form = form
-    }
+  --   form =
+  --     FormBuilder.toForm
+  --     toDataType
+  --     infosec
+  --     meta
+  -- in
+  --   { form = State form
+  --   }
     -- { --questionnaire = State Questionnaire.sampleData
     -- }

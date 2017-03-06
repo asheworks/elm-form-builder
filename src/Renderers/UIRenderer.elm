@@ -3,7 +3,7 @@ module Renderers.UIRenderer exposing
   )
 
 import FormBuilder exposing (..)
-import FormBuilder.Model exposing (..)
+-- import FormBuilder.Model exposing (..)
 import Renderers.Model exposing (..)
 
 import Char exposing (..)
@@ -30,7 +30,7 @@ render
   : Form ContainerFacts ( DataFacts ContainerFacts meta ) ( DataTypes meta ) meta
   -> Html Command
 render form =
-  applySectionZipper ( renderNode form ) form.def
+  applySectionZipper ( renderNode form ) form.sections
 
 
 renderNode
@@ -42,83 +42,58 @@ renderNode
   -> Html Command
 renderNode form state id ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
   let
-    id_ = Maybe.withDefault "" id
-
     path = appendPath state.path id
-
-    dataResult = getDataValue form path
-
-    -- data = Result.withDefault ( TextData ( DataValue (Just "") (Just "")  ) )
-
-    -- data = Dict.get path form.indexes.data
-    -- form.data
-    -- value =
-    --   List.filter
-    --     (\ data ->
-    --         data.path == path
-    --     )
-    --     form.dataList
-    --   |> List.head
-    --   |> Maybe.withDefault ( DataNode zipper path id_ Nothing )
-
   in
     case node of
       Branch _ container mods_ _ ->
         case container of
 
           BulletList types title ->
-            bullets id_ title zipper children
+            bullets path title zipper children
 
           Grid ->
-            grid id_ "" children
+            grid path "" children
 
           Header title ->
-            header id_ title children
+            header path title children
 
           LabeledSection title ->
-            header id_ title children
+            header path title children
 
           OrderedList title ->
-            orderedList id_ title False children
+            orderedList path title False children
 
       Leaf _ leaf mods_ ->
         case leaf of
 
           Bool mods control ->
-            bool id_
+            bool path
 
           FileUpload mods control ->
-              div [] [ Html.text <| "FileUpload: " ++ id_ ]
+              div [] [ Html.text <| "FileUpload: " ++ path ]
 
           Option mods values control ->
-            checkbox id_ ( Dict.fromList [ ( "one", "one" ) ] )
+            checkbox path ( Dict.fromList [ ( "one", "one" ) ] )
 
           Text mods control ->
-            case control of
-              TextInput title ctrlMods ->
-                textInput id_ title (getTextData dataResult) "" False
+            let
+              value = getDataNodeByPath form path |> getTextData
+            in
+              case control of
+                TextInput title ctrlMods ->
+                    textInput path title value "" False
 
-              TextLabel title ->
-                textLabel id_ title (getTextData dataResult) False
-
-
-getDataValue
-  : Form ContainerFacts ( DataFacts ContainerFacts meta ) ( DataTypes meta ) meta
-  -> String
-  -> Result String ( DataTypes meta )
-getDataValue form path =
-  case Dict.get path form.indexes.data of
-    Nothing -> Err <| " ** MISSING [ " ++ path ++ " ] ** "
-    Just dataNode -> Ok dataNode.data
+                TextLabel title ->
+                  textLabel path title value False
 
 
 getTextData
-  : Result String ( DataTypes meta )
+  : Maybe ( DataTypes mdeta )
   -> String
-getTextData dataResult =
-  case dataResult of
-    Err message -> message
-    Ok data ->
+getTextData dataNode =
+  case dataNode of
+    Nothing -> " ** NOT FOUND ** "
+    Just data ->
       case data of
         TextData dataValue ->
           Maybe.withDefault
@@ -128,7 +103,7 @@ getTextData dataResult =
             )
             dataValue.value
         _ -> " ** INVALID TYPE ** "
-        
+
 
 bool : String -> Html Command
 bool id =
@@ -207,7 +182,7 @@ checkbox id options =
             }
         )
     , error = Nothing
-    , onSelect = CheckboxData_Update-- (0, id)
+    , onSelect = CheckboxData_Update
     }
 
 
@@ -424,3 +399,63 @@ bulletString ctx =
               applyZipper (depth + 1) label_ parent
   in
     applyZipper 0 "" ctx
+
+
+
+-- dataResult = getDataByPath form path
+
+-- data = Result.withDefault ( TextData ( DataValue (Just "") (Just "")  ) )
+
+-- data = Dict.get path form.indexes.data
+-- form.data
+-- value =
+--   List.filter
+--     (\ data ->
+--         data.path == path
+--     )
+--     form.dataList
+--   |> List.head
+--   |> Maybe.withDefault ( DataNode zipper path id_ Nothing )
+
+
+-- let
+--   dataNode = getDataNodeByPath form path
+
+--   t = Debug.log "TextInput" dataNode.data
+-- in
+  
+-- textInput path title (getTextData dataResult) "" False
+
+-- value2 =
+--   value
+--     |> Maybe.map
+--         (\ maybeDataNode ->
+--             maybeDataNode.data
+--               -- |> Maybe.map
+--               --     (\ dataNode ->
+--               --         dataNode.data
+--               --     )
+--         )
+-- |> Maybe.map
+--     (\ dataNode ->
+--         dataNode.data.value
+--     )
+-- |> Maybe.withDefault ""
+
+-- getTextData
+--   : Result String ( DataTypes meta )
+--   -> String
+-- getTextData dataResult =
+--   case dataResult of
+--     Err message -> message
+--     Ok data ->
+--       case data of
+--         TextData dataValue ->
+--           Maybe.withDefault
+--             ( Maybe.withDefault
+--                 " ** NOT SET ** "
+--                 dataValue.default
+--             )
+--             dataValue.value
+--         _ -> " ** INVALID TYPE ** "
+        
