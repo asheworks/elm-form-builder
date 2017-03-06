@@ -397,6 +397,34 @@ mapDataNodeByPath form path mapper =
             Form form.sections zipper
         )
     |> Maybe.withDefault form
+
+toForm
+  : ( meta
+  -> ( Sections branch leaf meta ) -> data )
+  -> Sections branch leaf meta
+  -> meta
+  -> Form branch leaf data meta
+toForm dataTypeMap node meta =
+  let
+    sections : Zipper ( Sections branch leaf meta )
+    sections = ( toTree node, [] )
+
+    data : Zipper ( DataNode branch leaf data meta )
+    data = ( applySectionZipper ( toDataNode dataTypeMap meta ) sections, [] )
+
+  in
+    Form sections data
+  
+
+byId
+  : String
+  -> Tree ( Sections branch leaf meta )
+  -> Zipper ( Sections branch leaf meta )
+byId key tree =
+  ( tree, [] )
+
+
+
   -- let
   --   form_ =
   --     ( getDataNodeByPathSegments
@@ -429,34 +457,6 @@ mapDataNodeByPath form path mapper =
   --       --     )
   -- in
   --   form--Maybe.withDefault form maybeForm
-
-
-toForm
-  : ( meta
-  -> ( Sections branch leaf meta ) -> data )
-  -> Sections branch leaf meta
-  -> meta
-  -> Form branch leaf data meta
-toForm dataTypeMap node meta =
-  let
-    sections : Zipper ( Sections branch leaf meta )
-    sections = ( toTree node, [] )
-
-    data : Zipper ( DataNode branch leaf data meta )
-    data = ( applySectionZipper ( toDataNode dataTypeMap meta ) sections, [] )
-
-  in
-    Form sections data
-  
-
-byId
-  : String
-  -> Tree ( Sections branch leaf meta )
-  -> Zipper ( Sections branch leaf meta )
-byId key tree =
-  ( tree, [] )
-
-
 
 
 -- if id == ( MultiwayTreeZipper.datum zipper ).id then

@@ -67,13 +67,27 @@ renderNode form state id ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as
         case leaf of
 
           Bool mods control ->
-            bool path
+            let
+              value = getDataNodeByPath form path |> getBoolData
+            in
+              bool path value
 
           FileUpload mods control ->
-              div [] [ Html.text <| "FileUpload: " ++ path ]
+            let
+              values = getDataNodeByPath form path |> getListStringData
+            in
+              values ++ [ "FileUpload: " ++ path ]
+                |> List.map Html.text
+                |> div []
+              -- div [] [ Html.text <| "FileUpload: " ++ path ]
 
           Option mods values control ->
-            checkbox path ( Dict.fromList [ ( "one", "one" ) ] )
+            let
+              options = Dict.fromList values
+
+              value = getDataNodeByPath form path |> getOptionData
+            in
+              checkbox path options value
 
           Text mods control ->
             let
@@ -85,6 +99,67 @@ renderNode form state id ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as
 
                 TextLabel title ->
                   textLabel path title value False
+
+
+-- type DataTypes meta
+--   = Meta meta
+--   | BoolData ( DataValue meta Bool )
+--   | ListStringData ( DataValue meta ( List String )  )
+--   | OptionData ( DataValue meta ( Set String ) )
+--   | TextData ( DataValue meta String )
+
+getBoolData
+  : Maybe ( DataTypes mdeta )
+  -> Bool
+getBoolData dataNode =
+  case dataNode of
+    Nothing -> False
+    Just data ->
+      case data of
+        BoolData dataValue ->
+          Maybe.withDefault
+            ( Maybe.withDefault
+                False
+                dataValue.default
+            )
+            dataValue.value
+        _ -> False
+
+
+getListStringData
+  : Maybe ( DataTypes mdeta )
+  -> List String
+getListStringData dataNode =
+  case dataNode of
+    Nothing -> [ " ** NOT FOUND ** " ]
+    Just data ->
+      case data of
+        ListStringData dataValue ->
+          Maybe.withDefault
+            ( Maybe.withDefault
+                [ " ** NOT SET ** " ]
+                dataValue.default
+            )
+            dataValue.value
+        _ -> [ " ** INVALID TYPE ** " ]
+
+
+getOptionData
+  : Maybe (DataTypes meta)
+  -> Set String
+getOptionData dataNode =
+  case dataNode of
+    Nothing -> Set.fromList [ " ** NOT FOUND ** " ]
+    Just data ->
+      case data of
+        OptionData dataValue ->
+          Maybe.withDefault
+            ( Maybe.withDefault
+                ( Set.fromList [ " ** NOT SET ** " ] )
+                dataValue.default
+            )
+            dataValue.value
+        _ -> Set.fromList [ " ** INVALID TYPE ** " ]
 
 
 getTextData
@@ -105,13 +180,13 @@ getTextData dataNode =
         _ -> " ** INVALID TYPE ** "
 
 
-bool : String -> Html Command
-bool id =
+bool : String -> Bool -> Html Command
+bool id value =
   UI.yesNoField
     { id = id
     , yesLabel = "Yes"
     , noLabel = "No"
-    , value = False
+    , value = value
     , onChange = BoolData_Update
     }
 
@@ -167,8 +242,8 @@ bullets id title zipper children =
         children
     ]
 
-checkbox : String -> Dict String String -> Html Command
-checkbox id options =
+checkbox : String -> Dict String String -> Set String -> Html Command
+checkbox id options selected =
   UI.checkboxControl
     { id = id
     , values = options
@@ -177,7 +252,7 @@ checkbox id options =
         (\ (key, value) ->
             { key = key
             , value = value
-            , checked = Set.member key (Set.fromList [ "a" ])--(def.get model)
+            , checked = Set.member key selected--(Set.fromList [ "a" ])--(def.get model)
             , error = Nothing
             }
         )
