@@ -24,7 +24,6 @@ module Renderers.Model exposing
 
 
 import FormBuilder exposing (..)
--- import Renderers.Model exposing (..)
 import MultiwayTree exposing (..)
 import MultiwayTreeZipper exposing (..)
 import Set exposing (..)
@@ -80,7 +79,8 @@ type ContainerFacts
 
 
 type DataTypes meta
-  = BoolData ( DataValue meta Bool )
+  = Meta meta
+  | BoolData ( DataValue meta Bool )
   | ListStringData ( DataValue meta ( List String )  )
   | OptionData ( DataValue meta ( Set String ) )
   | TextData ( DataValue meta String )
@@ -103,8 +103,14 @@ type DataFacts branch meta
 
 
 boolIs : Bool -> Zipper (Sections branch leaf meta) -> Bool
-boolIs expected zipper =
-  False
+boolIs expected ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+  let
+    t = Debug.log "Renderers Model boolIs"
+  in
+    expected
+  -- case node of
+  --   Branch 
+  -- False
 
 
 
@@ -112,7 +118,11 @@ type alias VisibleDim dim =
   { dim | visible : Bool }
 
 
-visible : Selector branch leaf ( VisibleDim meta ) -> Predicate branch leaf ( VisibleDim meta ) -> Tree ( Sections branch leaf ( VisibleDim meta ) ) -> MetaModifiers branch leaf ( VisibleDim meta )
+visible
+  : Selector branch leaf ( VisibleDim meta )
+  -> Predicate branch leaf ( VisibleDim meta )
+  -> Tree ( Sections branch leaf ( VisibleDim meta ) )
+  -> MetaModifiers branch leaf ( VisibleDim meta )
 visible selector predicate tree =
   MetaMod (\ model ->
     { model | visible =
@@ -123,41 +133,22 @@ visible selector predicate tree =
   )
 
 
-toDataType : meta -> ( Sections branch ( DataFacts branch meta) meta ) -> Maybe ( DataTypes meta )
+toDataType
+  : meta
+  -> ( Sections branch ( DataFacts branch meta) meta )
+  -> DataTypes meta
 toDataType meta node =
-  case Debug.log "toDataType" node of
+  case node of
     Branch _ _ _ _ ->
-      Nothing
+      Meta meta
+
     Leaf _ leaf _ ->
-      Just <|
-        case leaf of
-          Bool mods control ->
-            applyLeafMods BoolData ( DataValue Nothing Nothing meta ) mods
-          FileUpload mods control ->
-            applyLeafMods ListStringData ( DataValue Nothing Nothing meta ) mods
-          Option mods options control ->
-            applyLeafMods OptionData ( DataValue Nothing Nothing meta ) mods
-          Text mods control ->
-            applyLeafMods TextData ( DataValue Nothing Nothing meta ) mods
-
-
-
--- getDataValue : DataTypes meta -> DataValue meta type_
--- getDataValue data =
---   case Debug.log "getDefault" data of
---     BoolData value ->
---       value
---     ListStringData value ->
---       value
---     OptionData value ->
---       value
---     TextData value ->
---       value
-
-
--- getDefault : DataTypes meta -> type_
--- getDefault data =
---   getDataValue data
---     |> .default
-
-      
+      case leaf of
+        Bool mods control ->
+          applyLeafMods BoolData ( DataValue Nothing Nothing meta ) mods
+        FileUpload mods control ->
+          applyLeafMods ListStringData ( DataValue Nothing Nothing meta ) mods
+        Option mods options control ->
+          applyLeafMods OptionData ( DataValue Nothing Nothing meta ) mods
+        Text mods control ->
+          applyLeafMods TextData ( DataValue Nothing Nothing meta ) mods

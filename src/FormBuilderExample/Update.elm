@@ -3,18 +3,21 @@ module FormBuilderExample.Update exposing (..)
 import CQRS exposing (eventBinder)
 
 --
-
+-- import FormBuilderExample.InfoSec exposing (..)
 import FormBuilderExample.Model exposing (..)
 
 --
 
-import FormBuilder exposing (..)
--- import FormBuilder.Model exposing (..)
-import FormBuilder.Update exposing (..)
--- import Example.FormBuilder as FormBuilder
--- import Example.Questionnaire as Questionnaire
---
+-- import FormBuilder exposing (..)
+-- -- import FormBuilder.Model exposing (..)
+-- import FormBuilder.Update exposing (..)
+-- -- import Example.FormBuilder as FormBuilder
+-- -- import Example.Questionnaire as Questionnaire
+-- --
+-- import FormBuilder as FormBuilder
 
+-- import Renderers.Model exposing (..)
+-- import Renderers.UIRenderer exposing (..)
 
 decode : Context -> Model
 decode =
@@ -29,6 +32,23 @@ encode _ =
 init : Model -> ( Model, Maybe effect )
 init model =
   ( model, Nothing )
+  -- let
+  --   meta =
+  --     { visible = False
+  --     }
+
+  --   form =
+  --     FormBuilder.toForm
+  --     toDataType
+  --     infosec
+  --     meta
+
+  --   model_ =
+  --     { model | form = form
+  --     }
+
+  -- in
+  --   ( model_, Nothing )
 
 
 commandMap : Model -> Command -> Event

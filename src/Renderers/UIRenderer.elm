@@ -16,10 +16,8 @@ import MultiwayTreeZipper exposing (..)
 import Set exposing (..)
 
 import UI as UI
--- import UI.Checkbox
 import UI.Input
 import UI.FieldLabel
--- import UI.LabeledInput as UI
 import UI.YesNo as UI
 
 
@@ -28,147 +26,109 @@ styles =
     asPairs >> Attr.style
 
 
--- render
---   : Form ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta
---   -> Html Command
--- render form =
---   let
---     applyZipper depth index ( ( ( ( Tree node children ) as subtree ), crumbs ) as zipper ) =
---       case node of  
---         Leaf _ _ _ ->
---           renderNode form zipper []
-
---         Branch _ _ _ _ ->
---           children
---             |> List.indexedMap
---                 (\ index_ _ ->
---                     goToChild index_ zipper
---                       |> Maybe.map ( applyZipper ( depth + 1 ) index_ )
---                 )
---             |> keepJusts
---             |> renderNode form zipper
---   in
---     applyZipper 0 0 ( form.def, [] )
-
 render
-  : Form ContainerFacts (DataFacts ContainerFacts meta) data meta
+  : Form ContainerFacts ( DataFacts ContainerFacts meta ) ( DataTypes meta ) meta
   -> Html Command
 render form =
-  applyZipper renderNode form.def
+  applySectionZipper ( renderNode form ) form.def
 
 
 renderNode
-  : ZipperState
+  : Form ContainerFacts ( DataFacts ContainerFacts meta ) ( DataTypes meta ) meta
+  -> ZipperState
   -> Maybe String
-  -> Zipper ( Sections ContainerFacts (DataFacts ContainerFacts meta) meta )
+  -> Zipper ( Sections ContainerFacts ( DataFacts ContainerFacts meta ) meta )
   -> List ( Html Command )
   -> Html Command
-renderNode state id ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
-      case node of
-        Branch _ container mods_ _ ->
-          let
-            id_ = Maybe.withDefault "" id
-          in
-            case container of
+renderNode form state id ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
+  let
+    id_ = Maybe.withDefault "" id
 
-              BulletList types title ->
-                bullets id_ title zipper children
+    path = appendPath state.path id
 
-              Grid ->
-                grid id_ "" children
+    dataResult = getDataValue form path
 
-              Header title ->
-                header id_ title children
+    -- data = Result.withDefault ( TextData ( DataValue (Just "") (Just "")  ) )
 
-              LabeledSection title ->
-                header id_ title children
+    -- data = Dict.get path form.indexes.data
+    -- form.data
+    -- value =
+    --   List.filter
+    --     (\ data ->
+    --         data.path == path
+    --     )
+    --     form.dataList
+    --   |> List.head
+    --   |> Maybe.withDefault ( DataNode zipper path id_ Nothing )
 
-              OrderedList title ->
-                orderedList id_ title False children
+  in
+    case node of
+      Branch _ container mods_ _ ->
+        case container of
 
+          BulletList types title ->
+            bullets id_ title zipper children
 
-        Leaf _ leaf mods_ ->
-          let
-            id_ = Maybe.withDefault "" id
-          in
-            case leaf of
+          Grid ->
+            grid id_ "" children
 
-              Bool mods control ->
-                bool id_
+          Header title ->
+            header id_ title children
 
-              FileUpload mods control ->
-                -- let
-                --   t = Debug.log "FileUpload" control
-                -- in
-                  div [] [ Html.text <| "FileUpload: " ++ id_ ]
+          LabeledSection title ->
+            header id_ title children
 
-              Option mods values control ->
-                checkbox id_ ( Dict.fromList [ ( "one", "one" ) ] )
+          OrderedList title ->
+            orderedList id_ title False children
 
-              Text mods control ->
-                case control of
-                  TextInput title ctrlMods ->
-                    textInput id_ title "" False
+      Leaf _ leaf mods_ ->
+        case leaf of
 
-                  TextLabel title ->
-                    textLabel id_ title "" False
+          Bool mods control ->
+            bool id_
 
+          FileUpload mods control ->
+              div [] [ Html.text <| "FileUpload: " ++ id_ ]
 
--- renderNode
---   : Form ContainerFacts (DataFacts ContainerFacts meta) (DataTypes meta) meta
---   -> Zipper ( Sections ContainerFacts (DataFacts ContainerFacts meta) meta )
---   -> List ( Html Command )
---   -> Html Command
--- renderNode form ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
---       case node of
---         Branch id container mods_ _ ->
---           let
---             id_ = Maybe.withDefault "" id
---           in
---             case container of
+          Option mods values control ->
+            checkbox id_ ( Dict.fromList [ ( "one", "one" ) ] )
 
---               BulletList types title ->
---                 bullets id_ title zipper children
+          Text mods control ->
+            case control of
+              TextInput title ctrlMods ->
+                textInput id_ title (getTextData dataResult) "" False
 
---               Grid ->
---                 grid id_ "" children
-
---               Header title ->
---                 header id_ title children
-
---               LabeledSection title ->
---                 header id_ title children
-
---               OrderedList title ->
---                 orderedList id_ title False children
+              TextLabel title ->
+                textLabel id_ title (getTextData dataResult) False
 
 
---         Leaf id leaf mods_ ->
---           let
---             id_ = Maybe.withDefault "" id
---           in
---             case leaf of
+getDataValue
+  : Form ContainerFacts ( DataFacts ContainerFacts meta ) ( DataTypes meta ) meta
+  -> String
+  -> Result String ( DataTypes meta )
+getDataValue form path =
+  case Dict.get path form.indexes.data of
+    Nothing -> Err <| " ** MISSING [ " ++ path ++ " ] ** "
+    Just dataNode -> Ok dataNode.data
 
---               Bool mods control ->
---                 bool id_
 
---               FileUpload mods control ->
---                 -- let
---                 --   t = Debug.log "FileUpload" control
---                 -- in
---                   div [] [ Html.text <| "FileUpload: " ++ id_ ]
-
---               Option mods values control ->
---                 checkbox id_ ( Dict.fromList [ ( "one", "one" ) ] )
-
---               Text mods control ->
---                 case control of
---                   TextInput title ctrlMods ->
---                     textInput id_ title "" False
-
---                   TextLabel title ->
---                     textLabel id_ title "" False
-
+getTextData
+  : Result String ( DataTypes meta )
+  -> String
+getTextData dataResult =
+  case dataResult of
+    Err message -> message
+    Ok data ->
+      case data of
+        TextData dataValue ->
+          Maybe.withDefault
+            ( Maybe.withDefault
+                " ** NOT SET ** "
+                dataValue.default
+            )
+            dataValue.value
+        _ -> " ** INVALID TYPE ** "
+        
 
 bool : String -> Html Command
 bool id =
@@ -212,7 +172,7 @@ bullets id title zipper children =
               , fontWeight bold
               ]
           ]
-          [ Html.text <| (bulletString zipper) --++ " - "
+          [ Html.text <| (bulletString zipper)
           ]
         , span
           [ styles
@@ -304,7 +264,15 @@ header id title children =
     , header = Just
       [ Html.text title
       ]
-    , section = Just children
+    , section = Just
+        [ div
+            [ styles
+                [ paddingLeft (px 10)
+                , paddingRight (px 10)
+                ]
+            ]
+            children
+        ]
     , aside = Nothing
     , footer = Nothing
     }
@@ -354,9 +322,10 @@ textInput
   : String
   -> String
   -> String
+  -> String
   -> Bool
   -> Html Command
-textInput id label placeholder error =
+textInput id label value placeholder error =
   UI.FieldLabel.view
     { id = id
     , label = label
@@ -367,7 +336,7 @@ textInput id label placeholder error =
       -- , label = def.label
       , placeholder = placeholder
       , inputType = UI.Input.TextField
-      , value = "asdf"--(def.get model)
+      , value = value--"asdf"--(def.get model)
       , error = False
       , onInput = TextData_Update -- (\ a b -> "" )--InputField_Update
       }

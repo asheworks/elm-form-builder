@@ -13,7 +13,12 @@ module FormBuilderExample.Model
 
 --
 
+import FormBuilderExample.InfoSec exposing (..)
+
+import FormBuilder exposing (..)
 import FormBuilder.Model as FormBuilder
+
+import Renderers.Model exposing (..)
 
 -- import CQRS exposing (State)
 
@@ -32,8 +37,13 @@ type alias Context =
     Maybe ContextValues
 
 
+type alias Meta =
+    { visible : Bool
+    }
+
 type alias Model =
-    { --questionnaire : State Questionnaire.SampleData
+    { form : Form ContainerFacts ( DataFacts ContainerFacts Meta ) ( DataTypes Meta ) Meta
+         --questionnaire : State Questionnaire.SampleData
     }
 
 
@@ -64,5 +74,18 @@ mapValues values =
 
 defaultModel : Model
 defaultModel =
-    { --questionnaire = State Questionnaire.sampleData
+  let
+    meta =
+      { visible = False
+      }
+
+    form =
+      FormBuilder.toForm
+      toDataType
+      infosec
+      meta
+  in
+    { form = form
     }
+    -- { --questionnaire = State Questionnaire.sampleData
+    -- }
