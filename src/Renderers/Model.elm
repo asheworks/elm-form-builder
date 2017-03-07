@@ -4,31 +4,59 @@ module Renderers.Model exposing
   , Effect(..)
 
   , Model
-  , defaultModel
+  , Meta
+  -- , defaultModel
 
   , Title
-  , BoolControls(..)
+  , title
 
-  , FileUploadControls(..)
+  -- , BoolControls(..)
 
-  , OptionControls(..)
+  -- , FileUploadControls(..)
 
-  , TextInputModel
-  , defaultTextInputModel
+  -- , OptionControls(..)
+
+  -- , TextInputModel
+  -- , defaultTextInputModel
+  
+  , default
   , placeholder
-  , TextControls(..)
+  , visible
+  -- , TextControls(..)
 
   , BulletTypes(..)
-  , ContainerFacts(..)
 
-  , DataTypes(..)
-  , DataFacts(..)
+  , Models(..)
 
-  , boolIs
-  , visible
+  , BranchModels(..)
+  , BranchFacts(..)
 
-  , toDataType
+  -- , DataTypes(..)
+  , LeafModels(..)
+  , LeafFacts(..)
+
+  -- , placeholder
+  -- , boolIs
+  -- , visible
+
+  , RendererSections
+  , RendererZipper
+  , RendererDataNode
+  , RendererForm
+  -- , SectionTypes
+  , toDataValue
   )
+
+
+-- boolIs : Bool -> Zipper (Sections branch leaf meta) -> Bool
+-- boolIs expected ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+--   let
+--     t = Debug.log "Renderers Model boolIs"
+--   in
+--     expected
+--   -- case node of
+--   --   Branch 
+--   -- False
 
 
 import CQRS exposing (State)
@@ -59,57 +87,20 @@ type Effect
   = None
 
 
-type alias Model branch leaf data meta =
-  { form : State ( Form branch leaf data meta )
+type alias Meta =
+  { visible : Bool
   }
 
-
-defaultModel
-  : (meta -> Sections branch leaf meta -> data)
-  -> Sections branch leaf meta
-  -> meta
-  -> { form : State ( Form branch leaf data meta ) }
-defaultModel mapper def meta =
-  { form = State <| toForm mapper def meta
-  }
+type alias Model meta =
+  RendererForm meta
 
 
 type alias Title = String
 
 
-type BoolControls
-  = YesNo
-  | YesNoMaybe
-
-
-type FileUploadControls
-  = MutiUpload
-
-
-type OptionControls
-  = Checkbox Title
-  | Radio Title
-
-
-type alias TextInputModel =
-  { placeholder : Maybe String
-  }
-
-
-defaultTextInputModel : TextInputModel
-defaultTextInputModel =
-  { placeholder = Nothing
-  }
-
-
-placeholder : String -> TextInputModel -> TextInputModel
-placeholder value model =
-  { model | placeholder = Just value }
-
-
-type TextControls
-  = TextInput Title ( List ( TextInputModel -> TextInputModel ) )
-  | TextLabel Title
+title : Title -> { model | title : Title } -> { model | title : Title }
+title value model =
+  { model | title = value }
 
 
 type BulletTypes
@@ -117,104 +108,259 @@ type BulletTypes
   | NumericBullets
 
 
-type ContainerFacts meta
-
-  = BulletList
-      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
-      BulletTypes
-      Title
-
-  | Grid
-      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
-
-  | Header
-      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
-      Title
-
-  | LabeledSection
-      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
-      Title
-
-  | OrderedList
-      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
-      Title
+type alias BulletListModel =
+  { title : Title
+  , bulletType : BulletTypes
+  }
 
 
-type DataTypes meta
-  = Meta meta
-  | BoolData ( DataValue meta Bool )
-  | ListStringData ( DataValue meta ( List String )  )
-  | OptionData ( DataValue meta ( Set String ) )
-  | TextData ( DataValue meta String )
+type alias GridModel =
+  { title : Title
+  }
 
 
-type DataFacts meta
-
-  = Bool
-      ( List ( LeafModifiers (DataTypes meta) meta Bool ) )
-      BoolControls
-
-  | FileUpload
-      ( List ( LeafModifiers (DataTypes meta) meta ( List String ) ) )
-      FileUploadControls
-
-  | Option
-      ( List ( LeafModifiers (DataTypes meta) meta ( Set String ) ) )
-      ( List ( String, String ) )
-      OptionControls
-
-  | Text
-      ( List ( LeafModifiers (DataTypes meta) meta String ) )
-      TextControls
+type alias HeaderModel =
+  { title : Title
+  }
 
 
-boolIs : Bool -> Zipper (Sections branch leaf meta) -> Bool
-boolIs expected ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+type alias LabeledSectionModel =
+  { title : Title
+  }
+
+
+type alias OrderedListModel =
+  { title : Title
+  }
+
+type alias CheckboxModel =
+  { title : String
+  , options : List ( String, String )
+  , values : Set String
+  }
+
+
+type alias MultiUploadModel =
+  { title : String
+  , values : Set String
+  }
+
+
+type alias RadioModel =
+  { title : String
+  , options : List ( String, String )
+  , value : String
+  }
+
+
+type alias TextInputModel =
+  { title : String
+  , placeholder : String
+  , default : Maybe String
+  , value : String
+  }
+
+
+type alias TextLabelModel =
+  { title : String
+  , default : Maybe String
+  , value : String
+  }
+
+
+type alias YesNoModel =
+  { title : String
+  , value : Bool
+  }
+
+
+type alias YesNoMaybeModel =
+  { title : String
+  , value : Maybe Bool
+  }
+
+
+type alias DefaultDim target type_ =
+  { target
+      | default : Maybe type_
+      , value : type_
+  }
+
+
+default : type_ -> DataValue ( DefaultDim model type_ ) meta -> DataValue ( DefaultDim model type_ ) meta
+default value data =
   let
-    t = Debug.log "Renderers Model boolIs"
+    model = data.model
   in
-    expected
-  -- case node of
-  --   Branch 
-  -- False
+    DataValue
+      { model
+          | default = Just value
+          , value = value
+      }
+      data.meta
+
+  
+type alias PlaceholderDim target =
+  { target
+      | placeholder : String
+  }
 
 
-
-type alias VisibleDim dim =
-  { dim | visible : Bool }
-
-
-visible
-  : Selector branch leaf ( VisibleDim meta )
-  -> Predicate branch leaf ( VisibleDim meta )
-  -> Tree ( Sections branch leaf ( VisibleDim meta ) )
-  -> MetaModifiers branch leaf ( VisibleDim meta )
-visible selector predicate tree =
-  MetaMod (\ model ->
-    { model | visible =
-        tree
-        |> selector
-        |> predicate
-    }
-  )
+placeholder : String -> DataValue ( PlaceholderDim model ) meta -> DataValue ( PlaceholderDim model ) meta
+placeholder value data =
+  let
+    model = data.model
+  in
+    DataValue
+      { model
+          | placeholder = value
+      }
+      data.meta
 
 
-toDataType
+type alias VisibleDim target =
+  { target
+      | visible : Bool
+  }
+
+
+visible : Bool -> DataValue model ( VisibleDim meta ) -> DataValue model ( VisibleDim meta )
+visible value data =
+  let
+    meta = data.meta
+
+    t = Debug.log "** VISIBLE" value
+  in
+    DataValue
+      data.model
+      { meta
+          | visible = value
+      }
+
+
+type BranchModels meta
+  = BulletListControl ( DataValue BulletListModel meta )
+  | GridControl ( DataValue GridModel meta )
+  | HeaderControl ( DataValue HeaderModel meta )
+  | LabeledSectionControl ( DataValue LabeledSectionModel meta )
+  | OrderedListControl ( DataValue OrderedListModel meta )
+
+
+type LeafModels meta
+  = CheckboxControl ( DataValue CheckboxModel meta )
+  | MultiUploadControl ( DataValue MultiUploadModel meta )
+  | RadioControl ( DataValue RadioModel meta )
+  | TextInputControl ( DataValue TextInputModel meta )
+  | TextLabelControl ( DataValue TextLabelModel meta )
+  | YesNoControl ( DataValue YesNoModel meta )
+  | YesNoMaybeControl ( DataValue YesNoMaybeModel meta )
+
+
+type Models meta
+  = BranchModel ( BranchModels meta )
+  | LeafModel ( LeafModels meta )
+
+
+type BranchFacts meta
+  = BulletList Title BulletTypes ( BranchModifiers BulletListModel meta )
+  | Grid Title ( BranchModifiers GridModel meta )
+  | Header Title ( BranchModifiers HeaderModel meta )
+  | LabeledSection Title ( BranchModifiers LabeledSectionModel meta )
+  | OrderedList Title ( BranchModifiers OrderedListModel meta )
+
+
+type LeafFacts meta
+  = Checkbox Title ( List ( String, String ) ) ( LeafModifiers CheckboxModel meta )
+  | MultiUpload Title ( LeafModifiers MultiUploadModel meta )
+  | Radio Title ( List ( String, String ) ) ( LeafModifiers RadioModel meta )
+  | TextInput Title ( LeafModifiers TextInputModel meta )
+  | TextLabel Title ( LeafModifiers TextLabelModel meta )
+  | YesNo Title ( LeafModifiers YesNoModel meta )
+  | YesNoMaybe Title ( LeafModifiers YesNoMaybeModel meta )
+
+
+type alias RendererSections meta =
+  Sections ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
+
+
+type alias RendererZipper meta =
+  Zipper ( RendererSections meta )
+
+
+type alias RendererDataNode meta =
+  DataNode ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
+
+
+type alias RendererForm meta =
+  Form ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
+
+
+applyMods
+  : model
+  -> meta
+  -> List ( DataValue model meta -> DataValue model meta )
+  -> DataValue model meta
+applyMods model meta mods =
+  mods
+    |> List.foldl
+        (\ mod model_ ->
+            mod model_
+            -- let
+            --   value = mod model_
+
+            --   t = Debug.log "Apply Mod" value
+            -- in
+            --   value
+        )
+        ( DataValue model meta )
+
+
+toDataValue
   : meta
-  -> ( Sections branch ( DataFacts meta) meta )
-  -> DataTypes meta
-toDataType meta node =
+  -> RendererSections meta
+  -> Models meta
+toDataValue meta node =
   case node of
-    Branch _ _ _ _ ->
-      Meta meta
+    Branch _ branch _ _ ->
+      BranchModel <|
+        case branch of
+
+          BulletList title bulletType mods ->
+            BulletListControl <| applyMods ( BulletListModel title bulletType ) meta mods
+
+          Grid title mods ->
+            GridControl <| applyMods ( GridModel title ) meta mods
+
+          Header title mods ->
+            HeaderControl <| applyMods ( HeaderModel title ) meta mods
+
+          LabeledSection title mods ->
+            LabeledSectionControl <| applyMods ( LabeledSectionModel title ) meta mods
+
+          OrderedList title mods ->
+            OrderedListControl <| applyMods ( OrderedListModel title ) meta mods
 
     Leaf _ leaf _ ->
-      case leaf of
-        Bool mods control ->
-          applyLeafMods BoolData ( DataValue Nothing Nothing meta ) mods
-        FileUpload mods control ->
-          applyLeafMods ListStringData ( DataValue Nothing Nothing meta ) mods
-        Option mods options control ->
-          applyLeafMods OptionData ( DataValue Nothing Nothing meta ) mods
-        Text mods control ->
-          applyLeafMods TextData ( DataValue Nothing Nothing meta ) mods
+      LeafModel <|
+        case leaf of
+
+          Checkbox title options mods ->
+            CheckboxControl <| applyMods ( CheckboxModel title options Set.empty ) meta mods
+
+          MultiUpload title mods ->
+            MultiUploadControl <| applyMods ( MultiUploadModel title Set.empty ) meta mods
+
+          Radio title options mods ->
+            RadioControl <| applyMods ( RadioModel title options "" ) meta mods
+
+          TextInput title mods ->
+            TextInputControl <| applyMods ( TextInputModel title "" Nothing "" ) meta mods
+
+          TextLabel title mods ->
+            TextLabelControl <| applyMods ( TextLabelModel title Nothing "" ) meta mods
+
+          YesNo title mods ->
+            YesNoControl <| applyMods ( YesNoModel title False ) meta mods
+
+          YesNoMaybe title mods ->
+            YesNoMaybeControl <| applyMods ( YesNoMaybeModel title Nothing ) meta mods

@@ -16,18 +16,12 @@ module FormBuilderExample.Model
 import CQRS exposing (State)
 
 import FormBuilder exposing (..)
--- import FormBuilder.Model as FormBuilder
 
-import Renderers.Model as FormBuilder
---exposing (..)
+import Renderers.Model as Renderers
 
-import FormBuilderExample.InfoSec exposing (..)
+-- import FormBuilderExample.InfoSec exposing (..)
+import FormBuilderExample.Sample exposing (..)
 
---
-
--- import FormBuilder as FormBuilder
-
--- import Example.Questionnaire as Questionnaire
 --
 
 type alias ContextValues =
@@ -38,36 +32,27 @@ type alias Context =
   Maybe ContextValues
 
 
-type alias Meta =
-  { visible : Bool
-  }
-
-type alias Model =
-  { formBuilder : State (
-      FormBuilder.Model
-        ( FormBuilder.ContainerFacts Meta )
-        ( FormBuilder.DataFacts Meta )
-        ( FormBuilder.DataTypes Meta )
-        Meta
-    )
-  }
-
-    -- { form : State ( Form ContainerFacts ( DataFacts ContainerFacts Meta ) ( DataTypes Meta ) Meta )
-    --      --questionnaire : State Questionnaire.SampleData
-    -- }
+-- type alias Meta =
+--   { visible : Bool
+--   }
 
 
 type Command
-  = FormBuilder_Command FormBuilder.Command
+  = FormBuilder_Command Renderers.Command
 
 
 type Event
-  = FormBuilder_Event FormBuilder.Event
+  = FormBuilder_Event Renderers.Event
 
 
 type Effect
-  = FormBuilder_Effect FormBuilder.Effect
+  = FormBuilder_Effect Renderers.Effect
     
+
+type alias Model =
+  { formBuilder : State ( Renderers.Model Renderers.Meta )
+  }
+
 
 mapContext : Context -> Model
 mapContext context =
@@ -84,24 +69,26 @@ mapValues values =
 
 defaultModel : Model
 defaultModel =
-  { formBuilder = State <| FormBuilder.defaultModel
-      FormBuilder.toDataType
-      infosec
-      { visible = False
-      }
-  }
-  -- let
-  --   meta =
-  --     { visible = False
-  --     }
+  let
+    mapper :
+      ( Renderers.Meta
+      -> Renderers.RendererSections Renderers.Meta
+      -> Renderers.Models Renderers.Meta
+      -- -> DataValue Renderers.Models Meta
+      )
+    mapper = Renderers.toDataValue
 
-  --   form =
-  --     FormBuilder.toForm
-  --     toDataType
-  --     infosec
-  --     meta
-  -- in
-  --   { form = State form
-  --   }
-    -- { --questionnaire = State Questionnaire.sampleData
-    -- }
+    node : Renderers.RendererSections Renderers.Meta
+    node = sample
+
+    meta : Renderers.Meta
+    meta =
+      { visible = True
+      }
+
+
+    form : Renderers.Model Renderers.Meta
+    form = toForm mapper node meta
+  in
+    { formBuilder = State <| form
+    }

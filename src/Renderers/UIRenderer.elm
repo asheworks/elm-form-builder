@@ -2,18 +2,17 @@ module Renderers.UIRenderer exposing
   ( render
   )
 
-import FormBuilder exposing (..)
--- import FormBuilder.Model exposing (..)
-import Renderers.Model exposing (..)
-
 import Char exposing (..)
+import Css exposing (..)
 import Dict exposing (..)
 import Html exposing (..)
 import Html.Attributes as Attr
-import Css exposing (..)
 import MultiwayTree exposing (..)
 import MultiwayTreeZipper exposing (..)
 import Set exposing (..)
+
+import FormBuilder exposing (..)
+import Renderers.Model exposing (..)
 
 import UI as UI
 import UI.Input
@@ -27,173 +26,101 @@ styles =
 
 
 render
-  : Form
-      ( ContainerFacts meta )
-      ( DataFacts meta )
-      ( DataTypes meta )
-      meta
+  : Model Meta
   -> Html Command
 render form =
-  applySectionZipper ( renderNode form ) form.sections
+  applySectionZipper
+    ( renderNode form )
+    form.sections
+
+
+checkVisible
+  : Html Command
+  -> DataValue model Meta
+  -> Html Command
+  -> Html Command
+checkVisible placeholder data control =
+  if data.meta.visible then
+    control
+  else
+    placeholder
+
 
 
 renderNode
-  : Form ( ContainerFacts meta ) ( DataFacts meta ) ( DataTypes meta ) meta
+  : Model Meta
   -> ZipperState
-  -> Maybe String
-  -> Zipper ( Sections ( ContainerFacts meta ) ( DataFacts meta ) meta )
+  -> String
+  -> RendererZipper Meta
   -> List ( Html Command )
   -> Html Command
-renderNode form state id ( ( ( ( Tree node children_ ) as subtree ), crumbs ) as zipper ) children =
+renderNode form state id zipper children =
   let
     path = appendPath state.path id
 
     dataNode = getDataNodeByPath form path
+
+    mod =
+      checkVisible
+        <| div []
+        <| [ Html.text "HIDDEN" ] ++ children
+
+    t = Debug.log "renderNode" dataNode
   in
-    case node of
-      Branch _ container mods_ _ ->
-        case container of
+    case dataNode of
+      Nothing -> div [] children
+      Just dataNode_ ->
+      
+        case dataNode_ of
 
-          BulletList mods types title ->
-            bullets path title zipper children
+          BranchModel branch ->
 
-          Grid mods ->
-            grid path "" children
+            case branch of
 
-          Header mods title ->
-            header path title children
+              BulletListControl data ->
+                mod data <| bullets path data.model.title zipper children
 
-          LabeledSection mods title ->
-            header path title children
+              GridControl data ->
+                mod data <| grid path data.model.title children
 
-          OrderedList mods title ->
-            orderedList path title False children
+              HeaderControl data ->
+                mod data <| header path data.model.title children
 
-      Leaf _ leaf mods_ ->
-        case leaf of
+              LabeledSectionControl data ->
+                mod data <| header path data.model.title children
 
-          Bool mods control ->
-            let
-              value = getBoolData dataNode
-            in
-            bool path value
+              OrderedListControl data ->
+                mod data <| orderedList path data.model.title False children
 
-          FileUpload mods control ->
-            let
-              values = getListStringData dataNode
-            in
-              values ++ [ "FileUpload: " ++ path ]
-                  |> List.map Html.text
-                  |> div []
+          LeafModel leaf ->
 
-          Option mods values control ->
-            let
-              options = Dict.fromList values
+            case leaf of
 
-              value = getOptionData dataNode
-            in
-              checkbox path options value
+              CheckboxControl data ->
+                mod data <| checkbox path ( Dict.fromList data.model.options ) data.model.values
 
-          Text mods control ->
-            let
-              value = getDataNodeByPath form path |> getTextData
-            in
-              case control of
-                TextInput title ctrlMods ->
-                  let
-                    state =
-                      List.foldl
-                        (\ mod state -> mod state )
-                        defaultTextInputModel
-                        ctrlMods
+              MultiUploadControl data ->
+                mod data <|
+                  (
+                    ( Set.toList data.model.values ) ++ [ "FileUpload: " ++ path ]
+                        |> List.map Html.text
+                        |> div []
+                  )
 
-                    placeholder = Maybe.withDefault "" state.placeholder
-                  in
-                    textInput path title value placeholder False
+              RadioControl data ->
+                mod data <| checkbox path ( Dict.fromList data.model.options ) Set.empty--[ model.value ]
 
-                TextLabel title ->
-                  textLabel path title value False
+              TextInputControl data ->
+                mod data <| textInput path data.model.title data.model.value data.model.placeholder False
 
+              TextLabelControl data ->
+                mod data <| textLabel path data.model.title data.model.value False
 
--- type DataTypes meta
---   = Meta meta
---   | BoolData ( DataValue meta Bool )
---   | ListStringData ( DataValue meta ( List String )  )
---   | OptionData ( DataValue meta ( Set String ) )
---   | TextData ( DataValue meta String )
+              YesNoControl data ->
+                mod data <| bool path data.model.value
 
-getBoolData
-  : Maybe ( DataTypes mdeta )
-  -> Bool
-getBoolData dataNode =
-  case dataNode of
-    Nothing -> False
-    Just data ->
-      case data of
-        BoolData dataValue ->
-          Maybe.withDefault
-            ( Maybe.withDefault
-                False
-                dataValue.default
-            )
-            dataValue.value
-        _ -> False
-
-
-getListStringData
-  : Maybe ( DataTypes mdeta )
-  -> List String
-getListStringData dataNode =
-  case dataNode of
-    Nothing -> [ " ** NOT FOUND ** " ]
-    Just data ->
-      case data of
-        ListStringData dataValue ->
-          Maybe.withDefault
-            ( Maybe.withDefault
-                [ " ** NOT SET ** " ]
-                dataValue.default
-            )
-            dataValue.value
-        _ -> [ " ** INVALID TYPE ** " ]
-
-
-getOptionData
-  : Maybe (DataTypes meta)
-  -> Set String
-getOptionData dataNode =
-  case dataNode of
-    Nothing ->
-      Set.empty
-    Just data ->
-      case data of
-        OptionData dataValue ->
-          Maybe.withDefault
-            ( Maybe.withDefault
-                Set.empty
-                dataValue.default
-            )
-            dataValue.value
-        _ ->
-          Set.empty
-
-
-getTextData
-  : Maybe ( DataTypes mdeta )
-  -> String
-getTextData dataNode =
-  case dataNode of
-    Nothing -> " ** NOT FOUND ** "
-    Just data ->
-      case data of
-        TextData dataValue ->
-          Maybe.withDefault
-            ( Maybe.withDefault
-                ""
-                dataValue.default
-            )
-            dataValue.value
-        _ -> " ** INVALID TYPE ** "
+              YesNoMaybeControl data ->
+                mod data <| bool path <| Maybe.withDefault False data.model.value
 
 
 bool : String -> Bool -> Html Command
@@ -210,7 +137,7 @@ bool id value =
 bullets
   : String
   -> String
-  -> Zipper ( Sections ( ContainerFacts meta ) (DataFacts meta) meta )
+  -> RendererZipper meta
   -> List ( Html Command )
   -> Html Command
 bullets id title zipper children =
@@ -268,7 +195,7 @@ checkbox id options selected =
         (\ (key, value) ->
             { key = key
             , value = value
-            , checked = Set.member key selected--(Set.fromList [ "a" ])--(def.get model)
+            , checked = Set.member key selected
             , error = Nothing
             }
         )
@@ -429,7 +356,7 @@ textLabel id label text error =
 
 
 bulletString
-  : Zipper ( Sections ( ContainerFacts meta ) (DataFacts meta) meta )
+  : RendererZipper meta
   -> String
 bulletString ctx =
   let
