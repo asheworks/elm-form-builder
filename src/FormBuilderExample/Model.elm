@@ -45,8 +45,8 @@ type alias Meta =
 type alias Model =
   { formBuilder : State (
       FormBuilder.Model
-        FormBuilder.ContainerFacts
-        ( FormBuilder.DataFacts FormBuilder.ContainerFacts Meta )
+        ( FormBuilder.ContainerFacts Meta )
+        ( FormBuilder.DataFacts Meta )
         ( FormBuilder.DataTypes Meta )
         Meta
     )

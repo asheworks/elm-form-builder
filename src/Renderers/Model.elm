@@ -14,6 +14,7 @@ module Renderers.Model exposing
   , OptionControls(..)
 
   , TextInputModel
+  , defaultTextInputModel
   , placeholder
   , TextControls(..)
 
@@ -110,17 +111,33 @@ type TextControls
   = TextInput Title ( List ( TextInputModel -> TextInputModel ) )
   | TextLabel Title
 
+
 type BulletTypes
   = AlphaBullets
   | NumericBullets
 
 
-type ContainerFacts
-  = BulletList BulletTypes Title
+type ContainerFacts meta
+
+  = BulletList
+      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
+      BulletTypes
+      Title
+
   | Grid
-  | Header Title
-  | LabeledSection Title
-  | OrderedList Title
+      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
+
+  | Header
+      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
+      Title
+
+  | LabeledSection
+      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
+      Title
+
+  | OrderedList
+      ( List ( BranchModifiers (DataTypes meta) meta Bool ) )
+      Title
 
 
 type DataTypes meta
@@ -131,19 +148,23 @@ type DataTypes meta
   | TextData ( DataValue meta String )
 
 
-type DataFacts branch meta
+type DataFacts meta
+
   = Bool
-      ( List ( DataModifiers branch (DataTypes meta) meta Bool ) )
+      ( List ( LeafModifiers (DataTypes meta) meta Bool ) )
       BoolControls
+
   | FileUpload
-      ( List ( DataModifiers branch (DataTypes meta) meta ( List String ) ) )
+      ( List ( LeafModifiers (DataTypes meta) meta ( List String ) ) )
       FileUploadControls
+
   | Option
-      ( List ( DataModifiers branch (DataTypes meta) meta ( Set String ) ) )
+      ( List ( LeafModifiers (DataTypes meta) meta ( Set String ) ) )
       ( List ( String, String ) )
       OptionControls
+
   | Text
-      ( List ( DataModifiers branch (DataTypes meta) meta String ) )
+      ( List ( LeafModifiers (DataTypes meta) meta String ) )
       TextControls
 
 
@@ -180,7 +201,7 @@ visible selector predicate tree =
 
 toDataType
   : meta
-  -> ( Sections branch ( DataFacts branch meta) meta )
+  -> ( Sections branch ( DataFacts meta) meta )
   -> DataTypes meta
 toDataType meta node =
   case node of

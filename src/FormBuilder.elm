@@ -4,7 +4,8 @@ module FormBuilder exposing
   , Id
   , DataValue
 
-  , DataModifiers(..)
+  , BranchModifiers(..)
+  , LeafModifiers(..)
 
   , MetaModifiers(..)
   , MetaMods
@@ -38,8 +39,6 @@ module FormBuilder exposing
   , getDataNodeByPathSegments
   , getDataNodeByPath
   , mapDataNodeByPath
-  -- , getDataByPath
-  -- , getDataZipperByPath
   )
 
 
@@ -75,16 +74,26 @@ type alias DataValue meta type_ =
   }
 
 
-type DataModifiers branch leaf meta type_
+-- type DataModifiers branch leaf meta type_
+  -- = BranchMod ( branch -> branch )
+  -- | LeafMod ( leaf -> leaf )
+  -- | ValueMod ( DataValue meta type_ -> DataValue meta type_ )
+
+
+type BranchModifiers branch meta type_
   = BranchMod ( branch -> branch )
-  | LeafMod ( leaf -> leaf )
-  | ValueMod ( DataValue meta type_ -> DataValue meta type_ )
+  | BranchValueMod ( DataValue meta type_ -> DataValue meta type_ )
+
+
+type LeafModifiers leaf meta type_
+  = LeafMod ( leaf -> leaf )
+  | LeafValueMod ( DataValue meta type_ -> DataValue meta type_ )
 
 
 applyLeafMods
   : ( DataValue meta type_ -> leaf )
   -> DataValue meta type_
-  -> List ( DataModifiers branch leaf meta type_ )
+  -> List ( LeafModifiers leaf meta type_ )
   -> leaf
 applyLeafMods leafMap value mods =
   List.foldr
@@ -97,7 +106,7 @@ applyLeafMods leafMap value mods =
     ( List.foldr
         (\ mod value_ ->
             case mod of
-              ValueMod map ->
+              LeafValueMod map ->
                 map value_
               _ -> value_
         )
@@ -158,9 +167,9 @@ type alias DataDim dim type_ =
   }
 
 
-default : type_ -> DataModifiers branch leaf meta type_
+default : type_ -> LeafModifiers leaf meta type_
 default value =
-  ValueMod (\ model ->
+  LeafValueMod (\ model ->
     { model | default = Just value }
   )
   
@@ -422,231 +431,3 @@ byId
   -> Zipper ( Sections branch leaf meta )
 byId key tree =
   ( tree, [] )
-
-
-
-  -- let
-  --   form_ =
-  --     ( getDataNodeByPathSegments
-  --         ( String.split "." path )
-  --         form.data
-  --     )
-  --       &> MultiwayTreeZipper.updateDatum mapper
-  --       &> goToRoot
-  --       |> Maybe.map
-  --           (\ zipper ->
-  --               Form form.sections zipper
-  --           )
-  --       |> Maybe.withDefault form
-  --     -- |> Maybe.map
-  --     --     (\ zipper ->
-  --     --         let
-  --     --           MultiwayTreeZipper.updateDatum mapper zipper
-                
-  --     --     )
-  --     -- |> Maybe.withDefault form
-
-  --   -- t =
-  --   --   zipper
-  --   --   |> Maybe.map
-  --       -- |> MultiwayTreeZipper.updateDatum mapper
-  --       -- |> MultiwayTreeZipper.goToRoot
-  --       -- |> Maybe.map
-  --       --     (\ zipper ->
-  --       --         Form form.sections zipper
-  --       --     )
-  -- in
-  --   form--Maybe.withDefault form maybeForm
-
-
--- if id == ( MultiwayTreeZipper.datum zipper ).id then
---   Maybe.andThen
---     (\ tail ->
---         getDataNodeByPathSegments tail ( zipper goToChild )
---     )
---     ( List.tail segments )
--- else
---   Nothing
-
--- &> Maybe.andThen
---     (\ id ->
---         if id == ( MultiwayTreeZipper.datum zipper ).id then
---           Maybe.andThen
---             (\ tail ->
---                 getDataNodeByPathSegments tail ( zipper goToChild )
---             )
---             ( List.tail segments )
---         else
---           Nothing
---     )
-
--- let
---   id = List.head
---   data = MultiwayTreeZipper.datum zipper
-
---   if data.id
--- in
-
--- case ( Just zipper &> goRight ) of
---   Just sibling ->
---     let
---       sib = MultiwayTreeZipper.datum sibling
---       s = Debug.log ( sib.path ++ " -- " ++ sib.id ) segments
---       t = Debug.log "Sib" sib.data
---     in
---       zipper
---   Nothing -> -- End of tier
-
---     let
---       node = MultiwayTreeZipper.datum zipper
---       s = Debug.log ( node.path ++ " -- " ++ node.id ) segments
---       t = Debug.log "Sib" node.data
---     in
---       zipper
-
-
-
-    
-
--- type alias Form branch leaf data meta =
---   { def : Tree ( Sections branch leaf meta )
---   , data : Tree ( DataNode branch leaf data meta )
---   , indexes :
---       { section : Dict String ( Sections branch leaf meta )
---       , sectionZipper : Dict String ( Zipper ( Sections branch leaf meta ) )
---       , data : Dict String ( DataNode branch leaf data meta )
---       , dataZipper : Dict String ( Zipper ( DataNode branch leaf data meta ) )
---       }
---   }
-
-
--- toSectionIndex
---   : ZipperState
---   -> Maybe String
---   -> Zipper ( Sections branch leaf meta )
---   -> List ( List ( String, Sections branch leaf meta ) )
---   -> List ( String, Sections branch leaf meta )
--- toSectionIndex state id ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
---   let
---     id_ = Maybe.withDefault "" id
-
---     path_ = appendPath state.path id
---   in
---     (\ children ->
---       ( List.concat children )
---       |> (::) ( path_, node )
---     )
-
-
--- toDataIndex
---   : ZipperState
---   -> String
---   -> Zipper ( DataNode branch leaf data meta )
---   -> List ( List ( String, ( DataNode branch leaf data meta ) ) )
---   -> List ( String, DataNode branch leaf data meta )
--- toDataIndex state id ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
---   let
---     path_ = appendPath state.path (Just id)
---   in
---     (\ children ->
---       ( List.concat children )
---       |> (::) ( path_, node )
---     )
-
-
--- getDataByPath
---   : Form branch leaf data meta
---   -> String
---   -> Result String data
--- getDataByPath form path =
---   case Dict.get path form.indexes.data of
---     Nothing -> Err <| "Missing data at path [ " ++ path ++ " ]"
---     Just dataNode -> Ok dataNode.data
-
--- -> Zipper ( DataNode branch leaf data meta )
-
-
-  -- Just zipper
-  --   &> goToChild 0
-
--- getDataByPath
---   : Form branch leaf data meta
---   -> String
---   -> data
--- getDataByPath form path =
---   String.split path "."
---     |> 
-
---   let
---     ( tree, crumbs ) = form.data
---   in
-
-
-  -- case form.data of
-    
-  -- form.data
-
--- getDataZipperByPath
---   : Form branch leaf data meta
---   -> String
---   -> Result String ( Zipper ( DataNode branch leaf data meta ) )
--- getDataZipperByPath form path =
---   case Dict.get path form.indexes.dataZipper of
---     Nothing -> Err <| "Missing data zipper at path  [ " ++ path ++ " ]"
---     Just zipper -> Ok zipper
-
-
-
--- toForm
---   : ( meta
---   -> ( Sections branch leaf meta ) -> data )
---   -> Sections branch leaf meta
---   -> meta
---   -> Form branch leaf data meta
--- toForm dataTypeMap node meta =
---   let
---     tree : Tree ( Sections branch leaf meta )
---     tree = toTree node
-
---     dataTree : Tree ( DataNode branch leaf data meta )
---     dataTree = applySectionZipper ( toDataNode dataTypeMap meta ) tree
-
---     indexes =
---       { section = Dict.fromList <| applySectionZipper toSectionIndex tree
---       , sectionZipper = Dict.fromList <| applySectionZipper toSectionZipperIndex tree
---       , data = Dict.fromList <| applyDataZipper toDataIndex dataTree
---       , dataZipper = Dict.fromList <| applyDataZipper toDataZipperIndex dataTree
---       }
-
---   in
---     Form tree dataTree indexes
-
-
-    -- sectionsIndex : Dict String ( Zipper ( Sections branch leaf meta ) )
-    -- sectionsIndex = Dict.fromList <| applySectionZipper toSectionIndex sections
-
-    -- dataIndex : Dict String ( Zipper ( Section))
-    -- dataIndex = Dict.fromList <| applyDataZipper toDataZipperIndex data
-
-  --sectionsIndex dataIndex
-
-  --   indexes =
-  --     { section = Dict.fromList <| applySectionZipper toSectionIndex tree
-  --     , sectionZipper = Dict.fromList <| applySectionZipper toSectionZipperIndex tree
-  --     , data = Dict.fromList <| applyDataZipper toDataIndex dataTree
-  --     , dataZipper = Dict.fromList <| applyDataZipper toDataZipperIndex dataTree
-  --     }
-
-  -- in
-  --   Form tree dataTree indexes
-
-
--- update
---   : Form branch leaf data meta
---   -> Zipper ( DataNode branch leaf data meta )
---   -> Form branch leaf data meta
--- update form zipper =
---   Form form.def 
---   zipper
---     |> goToRoot
-
