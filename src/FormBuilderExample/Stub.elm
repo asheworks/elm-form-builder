@@ -7,16 +7,9 @@ import Css exposing (..)
 
 --
 
--- import FormBuilderExample.InfoSec as FormBuilder
-
 import FormBuilderExample.Model exposing (..)
 import FormBuilderExample.Update as Example
 import FormBuilderExample.View as Example
-
--- import FormBuilder as FormBuilder
-
--- import Renderers.Model exposing (..)
--- import Renderers.UIRenderer exposing (..)
 
 --
 
@@ -37,7 +30,6 @@ stub =
   , encode = Example.encode
   , init = init
   , view = (\model -> Example.view model |> view)
-  -- , view = Html.map FormBuilder_Command ( render form )
   , commandMap = Example.commandMap
   , eventMap = Example.eventMap
   , eventHandler = eventHandler

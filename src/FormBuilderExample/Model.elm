@@ -20,7 +20,12 @@ import FormBuilder exposing (..)
 import Renderers.Model as Renderers
 
 -- import FormBuilderExample.InfoSec exposing (..)
+
+-- formDef = infosec
+
 import FormBuilderExample.Sample exposing (..)
+
+formDef = sample
 
 --
 
@@ -30,11 +35,6 @@ type alias ContextValues =
 
 type alias Context =
   Maybe ContextValues
-
-
--- type alias Meta =
---   { visible : Bool
---   }
 
 
 type Command
@@ -74,12 +74,11 @@ defaultModel =
       ( Renderers.Meta
       -> Renderers.RendererSections Renderers.Meta
       -> Renderers.Models Renderers.Meta
-      -- -> DataValue Renderers.Models Meta
       )
     mapper = Renderers.toDataValue
 
     node : Renderers.RendererSections Renderers.Meta
-    node = sample
+    node = formDef
 
     meta : Renderers.Meta
     meta =
@@ -87,8 +86,8 @@ defaultModel =
       }
 
 
-    form : Renderers.Model Renderers.Meta
-    form = toForm mapper node meta
+    model : Renderers.Model Renderers.Meta
+    model = { form = toForm mapper node meta }
   in
-    { formBuilder = State <| form
+    { formBuilder = State <| model
     }

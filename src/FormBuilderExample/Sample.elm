@@ -50,9 +50,9 @@ sample =
     ( Header "Sample Form" [] )
 
     [ version
+    , menu
     , details
     , definitions
-    , menu
     , uploadSection
     , compositeSection
     , questionsSection
@@ -82,7 +82,7 @@ details =
     , field "emailAddress" [] <|
         TextInput "Email Address"
           [ placeholder "user@email.com"
-          -- , default "asdf"
+          , default "user@gmail.com"
           ]
       
     , field "date" [] <|

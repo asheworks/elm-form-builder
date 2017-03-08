@@ -3,27 +3,6 @@ module Renderers.Model exposing
   , Event(..)
   , Effect(..)
 
-  , Model
-  , Meta
-  -- , defaultModel
-
-  , Title
-  , title
-
-  -- , BoolControls(..)
-
-  -- , FileUploadControls(..)
-
-  -- , OptionControls(..)
-
-  -- , TextInputModel
-  -- , defaultTextInputModel
-  
-  , default
-  , placeholder
-  , visible
-  -- , TextControls(..)
-
   , BulletTypes(..)
 
   , Models(..)
@@ -31,20 +10,35 @@ module Renderers.Model exposing
   , BranchModels(..)
   , BranchFacts(..)
 
-  -- , DataTypes(..)
   , LeafModels(..)
   , LeafFacts(..)
 
-  -- , placeholder
-  -- , boolIs
-  -- , visible
-
+  , Model
+  , Meta
+  
+  , Title
+  
   , RendererSections
   , RendererZipper
   , RendererDataNode
-  , RendererForm
-  -- , SectionTypes
+
+  , DataNodeMapper
+  , BranchMapper
+  , LeafMapper
+
+  , updateNode
+  , setBranch
+  , setLeaf
+
+  -- , RendererForm
+  
   , toDataValue
+
+  , title
+
+  , default
+  , placeholder
+  , visible
   )
 
 
@@ -68,17 +62,19 @@ import Set exposing (..)
 
 
 type Command
-  = BoolData_Update String Bool
-  | CheckboxData_Update String String --( Int, String )
+  = Checkbox_Update String String
+  | TextInput_Update String String
+  | YesNo_Update String Bool
+  | YesNoMaybe_Update String Bool
   -- | OptionsData_Update String ( Int, String )
   -- | StringListData_Update 
-  | TextData_Update String String
   
 
 type Event
-  = BoolData_Updated String Bool
-  | CheckboxData_Updated String String--( Int,  String )
-  | TextData_Updated String String
+  = Checkbox_Updated String String
+  | TextInput_Updated String String
+  | YesNo_Updated String Bool
+  | YesNoMaybe_Updated String Bool
   -- | InputField_Updated String String
   -- | RadioField_Updated String (Int, String)
 
@@ -92,7 +88,8 @@ type alias Meta =
   }
 
 type alias Model meta =
-  RendererForm meta
+  { form : Form ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
+  }
 
 
 type alias Title = String
@@ -114,6 +111,13 @@ type alias BulletListModel =
   }
 
 
+type alias CheckboxModel =
+  { title : String
+  , options : List ( String, String )
+  , values : Maybe ( Set String )
+  }
+
+
 type alias GridModel =
   { title : Title
   }
@@ -129,22 +133,14 @@ type alias LabeledSectionModel =
   }
 
 
-type alias OrderedListModel =
-  { title : Title
-  }
-
-type alias CheckboxModel =
-  { title : String
-  , options : List ( String, String )
-  , values : Set String
-  }
-
-
 type alias MultiUploadModel =
   { title : String
   , values : Set String
   }
 
+type alias OrderedListModel =
+  { title : Title
+  }
 
 type alias RadioModel =
   { title : String
@@ -229,7 +225,7 @@ visible value data =
   let
     meta = data.meta
 
-    t = Debug.log "** VISIBLE" value
+    -- t = Debug.log "** VISIBLE" value
   in
     DataValue
       data.model
@@ -291,8 +287,69 @@ type alias RendererDataNode meta =
   DataNode ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
 
 
-type alias RendererForm meta =
-  Form ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
+type alias DataNodeMapper meta =
+  ( RendererDataNode meta -> RendererDataNode meta )
+
+
+type alias BranchMapper meta =
+  ( BranchModels meta -> BranchModels meta )
+
+
+type alias LeafMapper meta =
+  ( LeafModels meta -> LeafModels meta )
+
+
+updateNode
+  : Model meta
+  -> String
+  -> DataNodeMapper meta
+  -> Model meta
+updateNode model path mapper =
+  let
+    updated = mapDataNodeByPath model.form path mapper
+  in
+    { model | form = updated
+    }
+
+
+setBranch
+  : BranchMapper meta
+  -> DataNodeMapper meta
+setBranch mapper =
+  (\ node ->
+      let
+        model = node.model
+      in
+        { node | model =
+          case node.model of
+            BranchModel branchModel ->
+              BranchModel <| mapper branchModel
+
+            _ -> node.model
+        }
+  )
+
+setLeaf
+  : LeafMapper meta
+  -> DataNodeMapper meta
+setLeaf mapper =
+  (\ node ->
+      let
+        model = node.model
+      in
+        { node | model =
+            case node.model of
+              LeafModel leafModel ->
+                LeafModel <| mapper leafModel
+
+              _ -> node.model
+        }
+  )
+
+
+
+-- type alias RendererForm meta =
+--   Form ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
 
 
 applyMods
@@ -305,12 +362,6 @@ applyMods model meta mods =
     |> List.foldl
         (\ mod model_ ->
             mod model_
-            -- let
-            --   value = mod model_
-
-            --   t = Debug.log "Apply Mod" value
-            -- in
-            --   value
         )
         ( DataValue model meta )
 
@@ -345,7 +396,7 @@ toDataValue meta node =
         case leaf of
 
           Checkbox title options mods ->
-            CheckboxControl <| applyMods ( CheckboxModel title options Set.empty ) meta mods
+            CheckboxControl <| applyMods ( CheckboxModel title options Nothing ) meta mods
 
           MultiUpload title mods ->
             MultiUploadControl <| applyMods ( MultiUploadModel title Set.empty ) meta mods

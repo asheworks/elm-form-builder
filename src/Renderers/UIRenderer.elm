@@ -28,10 +28,10 @@ styles =
 render
   : Model Meta
   -> Html Command
-render form =
+render model =
   applySectionZipper
-    ( renderNode form )
-    form.sections
+    ( renderNode model )
+    model.form.sections
 
 
 checkVisible
@@ -54,18 +54,18 @@ renderNode
   -> RendererZipper Meta
   -> List ( Html Command )
   -> Html Command
-renderNode form state id zipper children =
+renderNode model state id zipper children =
   let
     path = appendPath state.path id
 
-    dataNode = getDataNodeByPath form path
+    dataNode = getDataNodeByPath model.form path
 
     mod =
       checkVisible
         <| div []
         <| [ Html.text "HIDDEN" ] ++ children
 
-    t = Debug.log "renderNode" dataNode
+    -- t = Debug.log "renderNode" dataNode
   in
     case dataNode of
       Nothing -> div [] children
@@ -97,7 +97,7 @@ renderNode form state id zipper children =
             case leaf of
 
               CheckboxControl data ->
-                mod data <| checkbox path ( Dict.fromList data.model.options ) data.model.values
+                mod data <| checkbox path ( Dict.fromList data.model.options ) ( Maybe.withDefault Set.empty data.model.values )
 
               MultiUploadControl data ->
                 mod data <|
@@ -117,20 +117,31 @@ renderNode form state id zipper children =
                 mod data <| textLabel path data.model.title data.model.value False
 
               YesNoControl data ->
-                mod data <| bool path data.model.value
+                mod data <| yesNo path data.model.value
 
               YesNoMaybeControl data ->
-                mod data <| bool path <| Maybe.withDefault False data.model.value
+                mod data <| yesNoMaybe path data.model.value
 
 
-bool : String -> Bool -> Html Command
-bool id value =
+yesNo : String -> Bool -> Html Command
+yesNo id value =
   UI.yesNoField
     { id = id
     , yesLabel = "Yes"
     , noLabel = "No"
     , value = value
-    , onChange = BoolData_Update
+    , onChange = YesNo_Update
+    }
+
+
+yesNoMaybe : String -> Maybe Bool -> Html Command
+yesNoMaybe id value =
+  UI.yesNoField
+    { id = id
+    , yesLabel = "Yes"
+    , noLabel = "No"
+    , value = Maybe.withDefault False value
+    , onChange = YesNoMaybe_Update
     }
 
 
@@ -200,7 +211,7 @@ checkbox id options selected =
             }
         )
     , error = Nothing
-    , onSelect = CheckboxData_Update
+    , onSelect = Checkbox_Update
     }
 
 
@@ -330,7 +341,7 @@ textInput id label value placeholder error =
       , inputType = UI.Input.TextField
       , value = value
       , error = False
-      , onInput = TextData_Update
+      , onInput = TextInput_Update
       }
     ]
 
