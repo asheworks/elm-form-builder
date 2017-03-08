@@ -1,7 +1,5 @@
 module FormBuilder exposing
-  ( keepJusts
-
-  , Id
+  ( Id
   , DataValue
 
   , BranchModifiers
@@ -60,19 +58,6 @@ import MultiwayTreeZipper exposing (..)
 
 (&>) : Maybe a -> (a -> Maybe b) -> Maybe b
 (&>) = flip Maybe.andThen
-
-keepJusts : List (Maybe a) -> List a
-keepJusts list = 
-  case list of 
-    [] ->
-      []
-    mx :: xs ->
-      case mx of
-        Nothing ->
-          keepJusts xs
-          
-        Just x ->
-          x :: keepJusts xs
 
 
 type alias Id = String
@@ -220,7 +205,7 @@ sectionZipper state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as z
                           mapper
                       )
             )
-        |> keepJusts
+        |> List.filterMap identity
         |> mapper state id zipper
 
 
@@ -254,7 +239,7 @@ dataZipper state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as zipp
                           mapper
                       )
             )
-        |> keepJusts
+        |> List.filterMap identity
     )
 
 
