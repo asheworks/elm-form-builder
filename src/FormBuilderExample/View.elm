@@ -11,4 +11,7 @@ import Renderers.UIRenderer exposing (..)
 
 view : Model -> Html Command
 view model =
-  Html.map FormBuilder_Command ( render model.formBuilder.state )
+  render model.formBuilder.state
+    |> Maybe.map ( Html.map FormBuilder_Command )
+    |> Maybe.withDefault ( div [][] )
+  -- Html.map FormBuilder_Command ( render model.formBuilder.state )

@@ -1,57 +1,4 @@
-module Renderers.Model exposing
-  ( Command(..)
-  , Event(..)
-  , Effect(..)
-
-  , BulletTypes(..)
-
-  , Models(..)
-
-  , BranchModels(..)
-  , BranchFacts(..)
-
-  , LeafModels(..)
-  , LeafFacts(..)
-
-  , Model
-  , Meta
-  
-  , Title
-  
-  , RendererSections
-  , RendererZipper
-  , RendererDataNode
-
-  , DataNodeMapper
-  , BranchMapper
-  , LeafMapper
-
-  , updateNode
-  , setBranch
-  , setLeaf
-
-  -- , RendererForm
-  
-  , toDataValue
-
-  , title
-
-  , default
-  , placeholder
-  , visible
-  )
-
-
--- boolIs : Bool -> Zipper (Sections branch leaf meta) -> Bool
--- boolIs expected ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
---   let
---     t = Debug.log "Renderers Model boolIs"
---   in
---     expected
---   -- case node of
---   --   Branch 
---   -- False
-
+module Renderers.Model exposing (..)
 
 import CQRS exposing (State)
 
@@ -62,19 +9,19 @@ import Set exposing (..)
 
 
 type Command
-  = Checkbox_Update String String
-  | TextInput_Update String String
-  | YesNo_Update String Bool
-  | YesNoMaybe_Update String Bool
+  = Checkbox_Update RendererZipper String
+  | TextInput_Update RendererZipper String
+  | YesNo_Update RendererZipper Bool
+  | YesNoMaybe_Update RendererZipper Bool
   -- | OptionsData_Update String ( Int, String )
   -- | StringListData_Update 
   
 
 type Event
-  = Checkbox_Updated String String
-  | TextInput_Updated String String
-  | YesNo_Updated String Bool
-  | YesNoMaybe_Updated String Bool
+  = Checkbox_Updated RendererZipper String
+  | TextInput_Updated RendererZipper String
+  | YesNo_Updated RendererZipper Bool
+  | YesNoMaybe_Updated RendererZipper Bool
   -- | InputField_Updated String String
   -- | RadioField_Updated String (Int, String)
 
@@ -87,8 +34,40 @@ type alias Meta =
   { visible : Bool
   }
 
-type alias Model meta =
-  { form : Form ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
+
+type alias RendererForm =
+  Form BranchFacts BranchModels LeafFacts LeafModels Models Meta
+
+
+type alias RendererSections =
+  Sections BranchFacts BranchModels LeafFacts LeafModels Models Meta
+
+
+type alias RendererNode =
+  Node BranchFacts BranchModels LeafFacts LeafModels Models Meta
+
+
+type alias RendererZipper =
+  Zipper RendererNode
+
+
+type alias RendererDataNode =
+  Node BranchFacts BranchModels LeafFacts LeafModels Models Meta
+
+
+type alias RendererDataValue model = DataValue model Meta
+
+
+type alias BranchMapper =
+  ( BranchModels Meta -> BranchModels Meta )
+
+
+type alias LeafMapper =
+  ( LeafModels Meta -> LeafModels Meta )
+
+
+type alias Model =
+  { form : Maybe RendererForm
   }
 
 
@@ -184,16 +163,13 @@ type alias DefaultDim target type_ =
 
 
 default : type_ -> DataValue ( DefaultDim model type_ ) meta -> DataValue ( DefaultDim model type_ ) meta
-default value data =
-  let
-    model = data.model
-  in
-    DataValue
-      { model
-          | default = Just value
-          , value = value
-      }
-      data.meta
+default value ( model, meta ) =
+  ( { model
+      | default = Just value
+      , value = value
+    }
+  , meta
+  )
 
   
 type alias PlaceholderDim target =
@@ -203,15 +179,12 @@ type alias PlaceholderDim target =
 
 
 placeholder : String -> DataValue ( PlaceholderDim model ) meta -> DataValue ( PlaceholderDim model ) meta
-placeholder value data =
-  let
-    model = data.model
-  in
-    DataValue
-      { model
-          | placeholder = value
-      }
-      data.meta
+placeholder value ( model, meta ) =
+  ( { model
+      | placeholder = value
+    }
+  , meta
+  )
 
 
 type alias VisibleDim target =
@@ -221,158 +194,125 @@ type alias VisibleDim target =
 
 
 visible : Bool -> DataValue model ( VisibleDim meta ) -> DataValue model ( VisibleDim meta )
-visible value data =
-  let
-    meta = data.meta
-
-    -- t = Debug.log "** VISIBLE" value
-  in
-    DataValue
-      data.model
-      { meta
-          | visible = value
-      }
-
-
-type BranchModels meta
-  = BulletListControl ( DataValue BulletListModel meta )
-  | GridControl ( DataValue GridModel meta )
-  | HeaderControl ( DataValue HeaderModel meta )
-  | LabeledSectionControl ( DataValue LabeledSectionModel meta )
-  | OrderedListControl ( DataValue OrderedListModel meta )
-
-
-type LeafModels meta
-  = CheckboxControl ( DataValue CheckboxModel meta )
-  | MultiUploadControl ( DataValue MultiUploadModel meta )
-  | RadioControl ( DataValue RadioModel meta )
-  | TextInputControl ( DataValue TextInputModel meta )
-  | TextLabelControl ( DataValue TextLabelModel meta )
-  | YesNoControl ( DataValue YesNoModel meta )
-  | YesNoMaybeControl ( DataValue YesNoMaybeModel meta )
-
-
-type Models meta
-  = BranchModel ( BranchModels meta )
-  | LeafModel ( LeafModels meta )
-
-
-type BranchFacts meta
-  = BulletList Title BulletTypes ( BranchModifiers BulletListModel meta )
-  | Grid Title ( BranchModifiers GridModel meta )
-  | Header Title ( BranchModifiers HeaderModel meta )
-  | LabeledSection Title ( BranchModifiers LabeledSectionModel meta )
-  | OrderedList Title ( BranchModifiers OrderedListModel meta )
-
-
-type LeafFacts meta
-  = Checkbox Title ( List ( String, String ) ) ( LeafModifiers CheckboxModel meta )
-  | MultiUpload Title ( LeafModifiers MultiUploadModel meta )
-  | Radio Title ( List ( String, String ) ) ( LeafModifiers RadioModel meta )
-  | TextInput Title ( LeafModifiers TextInputModel meta )
-  | TextLabel Title ( LeafModifiers TextLabelModel meta )
-  | YesNo Title ( LeafModifiers YesNoModel meta )
-  | YesNoMaybe Title ( LeafModifiers YesNoMaybeModel meta )
-
-
-type alias RendererSections meta =
-  Sections ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
-
-
-type alias RendererZipper meta =
-  Zipper ( RendererSections meta )
-
-
-type alias RendererDataNode meta =
-  DataNode ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
-
-
-type alias DataNodeMapper meta =
-  ( RendererDataNode meta -> RendererDataNode meta )
-
-
-type alias BranchMapper meta =
-  ( BranchModels meta -> BranchModels meta )
-
-
-type alias LeafMapper meta =
-  ( LeafModels meta -> LeafModels meta )
-
-
-updateNode
-  : Model meta
-  -> String
-  -> DataNodeMapper meta
-  -> Model meta
-updateNode model path mapper =
-  let
-    updated = mapDataNodeByPath model.form path mapper
-  in
-    { model | form = updated
+visible value ( model, meta ) =
+  ( model
+  , { meta
+      | visible = value
     }
-
-
-setBranch
-  : BranchMapper meta
-  -> DataNodeMapper meta
-setBranch mapper =
-  (\ node ->
-      let
-        model = node.model
-      in
-        { node | model =
-          case node.model of
-            BranchModel branchModel ->
-              BranchModel <| mapper branchModel
-
-            _ -> node.model
-        }
-  )
-
-setLeaf
-  : LeafMapper meta
-  -> DataNodeMapper meta
-setLeaf mapper =
-  (\ node ->
-      let
-        model = node.model
-      in
-        { node | model =
-            case node.model of
-              LeafModel leafModel ->
-                LeafModel <| mapper leafModel
-
-              _ -> node.model
-        }
   )
 
 
+type BranchModels
+  = BulletListControl ( DataValue BulletListModel Meta )
+  | GridControl ( DataValue GridModel Meta )
+  | HeaderControl ( DataValue HeaderModel Meta )
+  | LabeledSectionControl ( DataValue LabeledSectionModel Meta )
+  | OrderedListControl ( DataValue OrderedListModel Meta )
 
--- type alias RendererForm meta =
---   Form ( BranchFacts meta ) BranchModels ( LeafFacts meta ) LeafModels ( Models meta ) meta
+
+type LeafModels
+  = CheckboxControl ( DataValue CheckboxModel Meta )
+  | MultiUploadControl ( DataValue MultiUploadModel Meta )
+  | RadioControl ( DataValue RadioModel Meta )
+  | TextInputControl ( DataValue TextInputModel Meta )
+  | TextLabelControl ( DataValue TextLabelModel Meta )
+  | YesNoControl ( DataValue YesNoModel Meta )
+  | YesNoMaybeControl ( DataValue YesNoMaybeModel Meta )
+
+
+type Models
+  = BranchModel BranchModels
+  | LeafModel LeafModels
+
+
+type BranchFacts
+  = BulletList Title BulletTypes ( Modifiers BulletListModel Meta )
+  | Grid Title ( Modifiers GridModel Meta )
+  | Header Title ( Modifiers HeaderModel Meta )
+  | LabeledSection Title ( Modifiers LabeledSectionModel Meta )
+  | OrderedList Title ( Modifiers OrderedListModel Meta )
+
+
+type LeafFacts
+  = Checkbox Title ( List ( String, String ) ) ( Modifiers CheckboxModel Meta )
+  | MultiUpload Title ( Modifiers MultiUploadModel Meta )
+  | Radio Title ( List ( String, String ) ) ( Modifiers RadioModel Meta )
+  | TextInput Title ( Modifiers TextInputModel Meta )
+  | TextLabel Title ( Modifiers TextLabelModel Meta )
+  | YesNo Title ( Modifiers YesNoModel Meta )
+  | YesNoMaybe Title ( Modifiers YesNoMaybeModel Meta )
+
+
+-- updateNode
+--   : Model meta
+--   -> String
+--   -> DataNodeMapper meta
+--   -> Model meta
+-- updateNode model path mapper =
+--   let
+--     updated = mapDataNodeByPath model.form path mapper
+--   in
+--     { model | form = updated
+--     }
+
+
+-- setBranch
+--   : BranchMapper meta
+--   -> DataNodeMapper meta
+-- setBranch mapper =
+--   (\ node ->
+--       let
+--         model = node.model
+--       in
+--         { node | model =
+--           case node.model of
+--             BranchModel branchModel ->
+--               BranchModel <| mapper branchModel
+
+--             _ -> node.model
+--         }
+--   )
+
+-- setLeaf
+--   : LeafMapper meta
+--   -> DataNodeMapper meta
+-- setLeaf mapper =
+--   (\ node ->
+--       let
+--         model = node.model
+--       in
+--         { node | model =
+--             case node.model of
+--               LeafModel leafModel ->
+--                 LeafModel <| mapper leafModel
+
+--               _ -> node.model
+--         }
+--   )
+
 
 
 applyMods
   : model
-  -> meta
-  -> List ( DataValue model meta -> DataValue model meta )
-  -> DataValue model meta
+  -> Meta
+  -> List ( RendererDataValue model -> RendererDataValue model )
+  -> RendererDataValue model
 applyMods model meta mods =
   mods
     |> List.foldl
         (\ mod model_ ->
             mod model_
         )
-        ( DataValue model meta )
+        ( model, meta )
 
 
 toDataValue
-  : meta
-  -> RendererSections meta
-  -> Models meta
+  : Meta
+  -> RendererSections
+  -> Models
 toDataValue meta node =
   case node of
-    Branch _ branch _ _ ->
+    Branch _ _ branch _ ->
       BranchModel <|
         case branch of
 
@@ -391,7 +331,7 @@ toDataValue meta node =
           OrderedList title mods ->
             OrderedListControl <| applyMods ( OrderedListModel title ) meta mods
 
-    Leaf _ leaf _ ->
+    Leaf _ _ leaf ->
       LeafModel <|
         case leaf of
 

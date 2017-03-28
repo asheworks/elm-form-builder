@@ -26,132 +26,132 @@ styles =
 
 
 render
-  : Model Meta
-  -> Html Command
+  : Model
+  -> Maybe ( Html Command )
 render model =
-  applySectionZipper
-    ( renderNode model )
-    model.form.sections
+  let
+    mapper = renderNode model
+  in
+    model.form |> Maybe.map
+      (\ form ->
+          applySectionZipper mapper ( form, [] )
+      )
 
 
 checkVisible
   : Html Command
-  -> DataValue model Meta
+  -> Meta
   -> Html Command
   -> Html Command
-checkVisible placeholder data control =
-  if data.meta.visible then
+checkVisible placeholder meta control =
+  if meta.visible then
     control
   else
     placeholder
 
 
-
 renderNode
-  : Model Meta
+  : Model
   -> ZipperState
   -> String
-  -> RendererZipper Meta
+  -> RendererZipper
   -> List ( Html Command )
   -> Html Command
 renderNode model state id zipper children =
   let
-    path = appendPath state.path id
-
-    dataNode = getDataNodeByPath model.form path
-
     mod =
       checkVisible
         <| div []
         <| [ Html.text "HIDDEN" ] ++ children
-
-    -- t = Debug.log "renderNode" dataNode
   in
-    case dataNode of
-      Nothing -> div [] children
-      Just dataNode_ ->
-      
-        case dataNode_ of
+    case MultiwayTreeZipper.datum zipper of
 
-          BranchModel branch ->
+      ( _, ( BranchModel branch, _ ) ) ->
 
-            case branch of
+        case branch of
 
-              BulletListControl data ->
-                mod data <| bullets path data.model.title zipper children
+          BulletListControl ( model, meta ) ->
+            mod meta <| bullets id zipper model.title children
 
-              GridControl data ->
-                mod data <| grid path data.model.title children
+          GridControl ( model, meta ) ->
+            mod meta <| grid id zipper model.title children
 
-              HeaderControl data ->
-                mod data <| header path data.model.title children
+          HeaderControl ( model, meta ) ->
+            mod meta <| header id zipper model.title children
 
-              LabeledSectionControl data ->
-                mod data <| header path data.model.title children
+          LabeledSectionControl ( model, meta ) ->
+            mod meta <| header id zipper model.title children
 
-              OrderedListControl data ->
-                mod data <| orderedList path data.model.title False children
+          OrderedListControl ( model, meta ) ->
+            mod meta <| orderedList id zipper model.title False children
 
-          LeafModel leaf ->
+      ( _, ( LeafModel leaf as model, _ ) ) ->
 
-            case leaf of
+        case leaf of
 
-              CheckboxControl data ->
-                mod data <| checkbox path ( Dict.fromList data.model.options ) ( Maybe.withDefault Set.empty data.model.values )
+          CheckboxControl ( model, meta ) ->
+            mod meta <| checkbox id zipper ( Dict.fromList model.options ) ( Maybe.withDefault Set.empty model.values )
 
-              MultiUploadControl data ->
-                mod data <|
-                  (
-                    ( Set.toList data.model.values ) ++ [ "FileUpload: " ++ path ]
-                        |> List.map Html.text
-                        |> div []
-                  )
+          MultiUploadControl ( model, meta ) ->
+            mod meta <|
+              (
+                ( Set.toList model.values ) ++ [ "FileUpload: " ++ id ]
+                    |> List.map Html.text
+                    |> div []
+              )
 
-              RadioControl data ->
-                mod data <| checkbox path ( Dict.fromList data.model.options ) Set.empty--[ model.value ]
+          RadioControl ( model, meta ) ->
+            mod meta <| checkbox id zipper ( Dict.fromList model.options ) Set.empty--[ model.value ]
 
-              TextInputControl data ->
-                mod data <| textInput path data.model.title data.model.value data.model.placeholder False
+          TextInputControl ( model, meta ) ->
+            mod meta <| textInput id zipper model.title model.value model.placeholder False
 
-              TextLabelControl data ->
-                mod data <| textLabel path data.model.title data.model.value False
+          TextLabelControl ( model, meta ) ->
+            mod meta <| textLabel id zipper model.title model.value False
 
-              YesNoControl data ->
-                mod data <| yesNo path data.model.value
+          YesNoControl ( model, meta ) ->
+            mod meta <| yesNo id zipper model.value
 
-              YesNoMaybeControl data ->
-                mod data <| yesNoMaybe path data.model.value
+          YesNoMaybeControl ( model, meta ) ->
+            mod meta <| yesNoMaybe id zipper model.value
 
 
-yesNo : String -> Bool -> Html Command
-yesNo id value =
+yesNo
+  : String
+  -> RendererZipper
+  -> Bool -> Html Command
+yesNo id zipper value =
   UI.yesNoField
     { id = id
     , yesLabel = "Yes"
     , noLabel = "No"
     , value = value
-    , onChange = YesNo_Update
+    , onChange = YesNo_Update zipper
     }
 
 
-yesNoMaybe : String -> Maybe Bool -> Html Command
-yesNoMaybe id value =
+yesNoMaybe
+  : String
+  -> RendererZipper
+  -> Maybe Bool
+  -> Html Command
+yesNoMaybe id zipper value =
   UI.yesNoField
     { id = id
     , yesLabel = "Yes"
     , noLabel = "No"
     , value = Maybe.withDefault False value
-    , onChange = YesNoMaybe_Update
+    , onChange = ( YesNoMaybe_Update zipper )
     }
 
 
 bullets
   : String
+  -> RendererZipper
   -> String
-  -> RendererZipper meta
   -> List ( Html Command )
   -> Html Command
-bullets id title zipper children =
+bullets id zipper title children =
   div
     [ styles
         [ paddingLeft (px 15)
@@ -196,31 +196,37 @@ bullets id title zipper children =
         children
     ]
 
-checkbox : String -> Dict String String -> Set String -> Html Command
-checkbox id options selected =
-  UI.checkboxControl
-    { id = id
-    , values = options
-      |> Dict.toList
-      |> List.map
-        (\ (key, value) ->
-            { key = key
-            , value = value
-            , checked = Set.member key selected
-            , error = Nothing
-            }
-        )
-    , error = Nothing
-    , onSelect = Checkbox_Update
-    }
+checkbox
+  : String
+  -> RendererZipper
+  -> Dict String String
+  -> Set String
+  -> Html Command
+checkbox id zipper options selected =
+    UI.checkboxControl
+      { id = id
+      , values = options
+        |> Dict.toList
+        |> List.map
+          (\ (key, value) ->
+              { key = key
+              , value = value
+              , checked = Set.member key selected
+              , error = Nothing
+              }
+          )
+      , error = Nothing
+      , onSelect = Checkbox_Update zipper
+      }
 
 
 grid
   : String
+  -> RendererZipper
   -> String
-  -> List (Html Command)
+  -> List (Html Command )
   -> Html Command
-grid id title children =
+grid id zipper title children =
   UI.FieldLabel.view
     { id = id
     , label = title
@@ -259,10 +265,11 @@ grid id title children =
 
 header
   : String
+  -> RendererZipper
   -> String
   -> List ( Html Command )
   -> Html Command
-header id title children =
+header id zipper title children =
   UI.formControl
     { id = id
     , header = Just
@@ -284,11 +291,12 @@ header id title children =
 
 orderedList
   : String
+  -> RendererZipper
   -> String
   -> Bool
   -> List ( Html Command )
   -> Html Command
-orderedList id title error children =
+orderedList id zipper title error children =
   UI.FieldLabel.view
     { id = id
     , label = title
@@ -324,12 +332,13 @@ orderedList id title error children =
 
 textInput
   : String
+  -> RendererZipper
   -> String
   -> String
   -> String
   -> Bool
   -> Html Command
-textInput id label value placeholder error =
+textInput id zipper label value placeholder error =
   UI.FieldLabel.view
     { id = id
     , label = label
@@ -341,18 +350,19 @@ textInput id label value placeholder error =
       , inputType = UI.Input.TextField
       , value = value
       , error = False
-      , onInput = TextInput_Update
+      , onInput = TextInput_Update zipper
       }
     ]
 
 
 textLabel
   : String
+  -> RendererZipper
   -> String
   -> String
   -> Bool
   -> Html Command
-textLabel id label text error =
+textLabel id zipper label text error =
   UI.FieldLabel.view
     { id = id
     , label = label
@@ -367,17 +377,18 @@ textLabel id label text error =
 
 
 bulletString
-  : RendererZipper meta
+  : RendererZipper
   -> String
-bulletString ctx =
+bulletString zipper =
   let
+    countPrevZipper : ( Int, Int ) -> RendererZipper -> ( Int, Int )
     countPrevZipper ( ( alpha, numeric ) as count ) ( ( subtree, crumbs ) as zipper ) =
       case goLeft zipper of
         Nothing -> count
         Just ( ( ( ( Tree node children ) as subtree_ ), crumbs_ ) as prev ) ->
           let
             count_ = case node of
-              Branch _ container _ _ ->
+              ( Branch _ _ container _, _ ) ->
 
                 case container of
                   BulletList mods types _ ->
@@ -393,9 +404,10 @@ bulletString ctx =
           in
             countPrevZipper count_ prev
 
+    bulletStringZipper : Int -> RendererZipper -> String
     bulletStringZipper depth ( ( ( ( Tree node children ) as subtree ), crumbs ) as zipper ) =
       case node of
-        Branch _ container _ _ ->
+        ( Branch _ _ container _, _ ) ->
           case container of
             BulletList mods types _ ->
               let
@@ -409,6 +421,7 @@ bulletString ctx =
 
         _ -> ""
 
+    applyZipper : Int -> String -> RendererZipper -> String
     applyZipper depth label ( ( subtree, crumbs ) as zipper ) =
       let
         bulletLabel = (bulletStringZipper depth zipper)
@@ -426,4 +439,4 @@ bulletString ctx =
           Just parent ->
               applyZipper (depth + 1) label_ parent
   in
-    applyZipper 0 "" ctx
+    applyZipper 0 "" zipper

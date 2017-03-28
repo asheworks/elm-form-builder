@@ -14,21 +14,50 @@ defaultRisk =
   "Provide a reason"
 
 
+-- infoSection
+--   : String
+--   -> String
+--   -> Maybe String
+--   -> Maybe String
+--   -> List ( RendererSections Meta )
+--   -> RendererSections Meta
+-- infoSection key title descriptionLabel riskLabel children =
+--   section key []
+--     ( BulletList title NumericBullets [] ) <|
+
+--     [ field "selected" [] <|
+--         YesNo "" []
+
+--     , field "description"
+--         [ visible False
+--         --visible (byId <| key ++ ".selected") <| boolIs True
+--         ] <|
+--         TextInput ( Maybe.withDefault defaultDescription descriptionLabel )
+--           [ visible False
+--           ]
+
+--     , field "risk"
+--         [ --visible (byId <| key ++ ".selected") <| boolIs False
+--         ] <|
+--         TextInput ( Maybe.withDefault defaultRisk riskLabel ) []
+
+--     ] ++ children
+
+
 infoSection
   : String
   -> String
   -> Maybe String
   -> Maybe String
-  -> List ( RendererSections Meta )
-  -> RendererSections Meta
+  -> List RendererSections
+  -> RendererSections
 infoSection key title descriptionLabel riskLabel children =
-  section key []
-    ( BulletList title NumericBullets [] ) <|
+  Branch key [] ( BulletList title NumericBullets [] ) <|
 
-    [ field "selected" [] <|
+    [ Leaf "selected" [] <|
         YesNo "" []
 
-    , field "description"
+    , Leaf "description"
         [ visible False
         --visible (byId <| key ++ ".selected") <| boolIs True
         ] <|
@@ -36,7 +65,7 @@ infoSection key title descriptionLabel riskLabel children =
           [ visible False
           ]
 
-    , field "risk"
+    , Leaf "risk"
         [ --visible (byId <| key ++ ".selected") <| boolIs False
         ] <|
         TextInput ( Maybe.withDefault defaultRisk riskLabel ) []
@@ -44,9 +73,9 @@ infoSection key title descriptionLabel riskLabel children =
     ] ++ children
 
 
-sample : RendererSections Meta
+sample : RendererSections
 sample =
-  section "sample" []
+  Branch "sample" []
     ( Header "Sample Form" [] )
 
     [ compositeSection
@@ -60,75 +89,75 @@ sample =
     ]
 
 
-version : RendererSections Meta
+version : RendererSections
 version =
-  field "version" [] <|
+  Leaf "version" [] <|
     TextLabel "Version"
       [ default "v1.0.0"
       ]
 
 
-details : RendererSections Meta
+details : RendererSections
 details =
-  section "details" []
+  Branch "details" []
     ( Grid "" [] )
 
-    [ field "companyName" [] <|
+    [ Leaf "companyName" [] <|
         TextInput "Company Name" []
     
-    , field "contactName" [] <|
+    , Leaf "contactName" [] <|
         TextInput "Contact Name" []
 
-    , field "emailAddress" [] <|
+    , Leaf "emailAddress" [] <|
         TextInput "Email Address"
           [ placeholder "user@email.com"
           , default "user@gmail.com"
           ]
       
-    , field "date" [] <|
+    , Leaf "date" [] <|
         TextInput "Date"
           [ placeholder "mm-dd-yyyy"
           ]
 
-    , field "title" [] <|
+    , Leaf "title" [] <|
         TextInput "Title" []
 
-    , field "telephone" [] <|
+    , Leaf "telephone" [] <|
         TextInput "Telephone"
               [ placeholder "(xxx) xxx-xxxx"
               ]
     ]
 
 
-definitions : RendererSections Meta
+definitions : RendererSections
 definitions =
-  section "definitions" []
+  Branch "definitions" []
     ( OrderedList "Definitions:" [] )
 
-    [ field "rules" [] <|
+    [ Leaf "rules" [] <|
         TextLabel "Rules"
           [ default "You must follow all of my rules"
           ]
 
-    , field "punishments" [] <|
+    , Leaf "punishments" [] <|
         TextLabel "Punishments"
           [ default "The punishment will be harsh..."
           ]
     ]
 
 
-menu : RendererSections Meta
+menu : RendererSections
 menu =
-  section "menu" []
+  Branch "menu" []
     ( BulletList "Meal Description:" AlphaBullets []
     )
 
-    [ section "offered" []
+    [ Branch "offered" []
         ( BulletList "Check all the kinds of food you serve:"
             NumericBullets []
         )
 
-        [ field "selected" [] <|
+        [ Leaf "selected" [] <|
             Checkbox ""
               [ ( "italian", "Italian" )
               , ( "mexican", "Mexican" )
@@ -137,14 +166,14 @@ menu =
               ]
               []
 
-        , field "preparation" [] <|
+        , Leaf "preparation" [] <|
             TextInput "Please describe preparation options offered:" []
 
-        , section "compliance" []
+        , Branch "compliance" []
             ( BulletList "Check all boxes which describe how the food is prepared:"
                 NumericBullets []
             )
-            [ field "selected" [] <|
+            [ Leaf "selected" [] <|
                 Checkbox ""
                   [ ( "deepfry", "Deep Fried" )
                   , ( "grill", "Grilled" )
@@ -152,23 +181,23 @@ menu =
                   ]
                   []
 
-            , section "deepfry"
+            , Branch "deepfry"
                 [ --visible (byId "infosec.services.compliance.selected") <| boolIs False
                 ]
                 ( BulletList "Do you enjoy deep fried food?"
                     NumericBullets []
                 )
-                [ field "enjoy" [] <|
+                [ Leaf "enjoy" [] <|
                     YesNoMaybe "" []
                 ]
 
-            , section "grill"
+            , Branch "grill"
                 [ --visible (byId "infosec.services.compliance.selected") <| boolIs False
                 ]
                 ( BulletList "Do you enjoy grilled food?"
                     NumericBullets []
                 )
-                [ field "enjoy" [] <|
+                [ Leaf "enjoy" [] <|
                     YesNoMaybe "" []
                 ]
 
@@ -177,23 +206,23 @@ menu =
     ]
 
 
-uploadSection : RendererSections Meta
+uploadSection : RendererSections
 uploadSection =
-  section "uploadSection" []
+  Branch "uploadSection" []
     ( BulletList "Upload Section:" NumericBullets []
     )
 
-    [ field "haveUploads" [] <|
+    [ Leaf "haveUploads" [] <|
         YesNoMaybe "" []
 
-    , field "files" [] <|
+    , Leaf "files" [] <|
         MultiUpload "" []
     ]
 
 
-compositeSection : RendererSections Meta
+compositeSection : RendererSections
 compositeSection =
-  section "compositeSection" []
+  Branch "compositeSection" []
     ( BulletList "COMPOSITE SECTION"
         NumericBullets []
     )
@@ -222,9 +251,9 @@ compositeSection =
     ]
 
 
-questionsSection : RendererSections Meta
+questionsSection : RendererSections
 questionsSection =
-    section "questionsSection" []
+    Branch "questionsSection" []
       ( BulletList "COMPOSITE SET SECTION"
           NumericBullets []
       )
@@ -235,11 +264,11 @@ questionsSection =
           ( Just "With a custom message applied..." )
           Nothing
 
-          [ section "included" []
+          [ Branch "included" []
               ( BulletList "What do you think is important (check all that apply):"
                   NumericBullets []
               )
-              [ field "selected" [] <|
+              [ Leaf "selected" [] <|
                   Checkbox ""
                     [ ( "happyness", "Happyness is important?" )
                     , ( "money", "Money is important?" )
@@ -253,25 +282,25 @@ questionsSection =
       ]
 
 
-optionalListSection : RendererSections Meta
+optionalListSection : RendererSections
 optionalListSection =
-    section "optionalListSection"
+    Branch "optionalListSection"
       [ --visible (byId "infosec.customSoftware.provided") <| boolIs False
       ]
       ( BulletList "Does you do some things you're not proud of?" NumericBullets []
       )
 
-      [ field "selected" [] <|
+      [ Leaf "selected" [] <|
           YesNo ""
             [ -- default False
             ]
 
-      , section "details"
+      , Branch "details"
           [ -- visible (byId "infosec.storeData.selected") <| boolIs False
           ]
           ( OrderedList "What are they?" [] )
 
-          [ field "guilts" [] <|
+          [ Leaf "guilts" [] <|
               Checkbox ""
                 [ ( "thoughts", "Thoughts" )
                 , ( "actions", "Actions" )

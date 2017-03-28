@@ -50,7 +50,7 @@ type Effect
     
 
 type alias Model =
-  { formBuilder : State ( Renderers.Model Renderers.Meta )
+  { formBuilder : State ( Renderers.Model )
   }
 
 
@@ -72,12 +72,12 @@ defaultModel =
   let
     mapper :
       ( Renderers.Meta
-      -> Renderers.RendererSections Renderers.Meta
-      -> Renderers.Models Renderers.Meta
+      -> Renderers.RendererSections
+      -> Renderers.Models
       )
     mapper = Renderers.toDataValue
 
-    node : Renderers.RendererSections Renderers.Meta
+    node : Renderers.RendererSections
     node = formDef
 
     meta : Renderers.Meta
@@ -86,8 +86,8 @@ defaultModel =
       }
 
 
-    model : Renderers.Model Renderers.Meta
-    model = { form = toForm mapper node meta }
+    model : Renderers.Model
+    model = { form = Just <| toTree mapper meta node }
   in
     { formBuilder = State <| model
     }

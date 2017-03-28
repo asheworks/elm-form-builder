@@ -4,9 +4,7 @@ module Renderers.Update exposing
   )
 
 
--- import CQRS exposing (State)
-
--- import FormBuilder exposing (..)
+import MultiwayTreeZipper exposing (..)
 import Renderers.Model exposing (..)
 
 import Set exposing (..)
@@ -15,17 +13,17 @@ commandMap : model -> Command -> Event
 commandMap model command =
   case command of
     
-    Checkbox_Update path value ->
-      Checkbox_Updated path value
+    Checkbox_Update zipper value ->
+      Checkbox_Updated zipper value
 
-    TextInput_Update path value ->
-      TextInput_Updated path value
+    TextInput_Update zipper value ->
+      TextInput_Updated zipper value
     
-    YesNo_Update path value ->
-      YesNo_Updated path value
+    YesNo_Update zipper value ->
+      YesNo_Updated zipper value
 
-    YesNoMaybe_Update path value ->
-      YesNoMaybe_Updated path value
+    YesNoMaybe_Update zipper value ->
+      YesNoMaybe_Updated zipper value
 
     -- RadioField_Update id value ->
     --   RadioField_Updated id value
@@ -35,113 +33,105 @@ commandMap model command =
 
 
 eventMap
-  : Model meta
+  : Model
   -> Event
-  ->  ( Model meta
+  ->  ( Model
       , Maybe Effect
       )
 eventMap model event =
-  case event of
+  let
+    t = Debug.log "Event Map" event
+  in
+    ( model, Nothing )
+  -- let
+  --   zipper_ =
+  --     ( case event of
 
-    Checkbox_Updated path value ->
-      ( updateNode model path <| setLeaf <| setCheckbox value
-      , Nothing
-      )
+  --         Checkbox_Updated ( zipper, data ) value ->
+  --           updateDatum ( setCheckbox value ) zipper
 
-    TextInput_Updated path value ->
-      ( updateNode model path <| setLeaf <| setTextInput value
-      , Nothing
-      )
+  --         TextInput_Updated ( zipper, data ) value ->
+  --           updateDatum ( setTextInput value ) zipper
 
-    YesNo_Updated path value ->
-      ( updateNode model path <| setLeaf <| setYesNo value
-      , Nothing
-      )
+  --         YesNo_Updated ( zipper, data ) value ->
+  --           updateDatum ( setYesNo value ) zipper
 
-    YesNoMaybe_Updated path value ->
-      ( updateNode model path <| setLeaf <| setYesNoMaybe value
-      , Nothing
-      )
-
+  --         YesNoMaybe_Updated ( zipper, data ) value ->
+  --           updateDatum ( setYesNoMaybe value ) zipper
+  --     )
+    
+  --   -- ( tree, _ ) = zipper_
+  --   -- tree = zipper
+  --   --   |> Maybe.andThen goToRoot
+  --   --   |> Maybe.map (\ ( tree, _ ) -> tree )
+  -- in
+    -- ( { model | form = Nothing }, Nothing )
+    
 
 setCheckbox
   : String
-  -> LeafModels meta
-  -> LeafModels meta
+  -> LeafModels
+  -> LeafModels
 setCheckbox value leafModel =
   case leafModel of
-    CheckboxControl dataValue ->
-      let
-        model_ = dataValue.model
-      in
-        CheckboxControl
-          { dataValue | model =
-              { model_ | values =
-                  model_.values
-                    |> Maybe.map
-                        (\ set ->
-                            if Set.member value set then
-                              Set.remove value set
-                            else
-                              Set.insert value set
-                        )
-                    |> Maybe.withDefault ( Set.fromList [ value ] )
-                    |> Just
-              }
+    CheckboxControl ( model, meta ) ->
+      CheckboxControl
+        ( { model | values =
+              model.values
+                |> Maybe.map
+                    (\ set ->
+                        if Set.member value set then
+                          Set.remove value set
+                        else
+                          Set.insert value set
+                    )
+                |> Maybe.withDefault ( Set.fromList [ value ] )
+                |> Just
           }
+        , meta
+        )
     _ -> leafModel
 
 
 setTextInput
   : String
-  -> LeafModels meta
-  -> LeafModels meta
+  -> LeafModels
+  -> LeafModels
 setTextInput value leafModel =
   case leafModel of
-    TextInputControl dataValue ->
-      let
-        model_ = dataValue.model
-      in
-        TextInputControl
-          { dataValue | model =
-              { model_ | value = value
-              }
-          }
+    TextInputControl ( model, meta ) ->
+      TextInputControl
+        ( { model | value = value }
+        , meta
+        )
     _ -> leafModel
 
 
 setYesNo
   : Bool
-  -> LeafModels meta
-  -> LeafModels meta
+  -> LeafModels
+  -> LeafModels
 setYesNo value leafModel =
   case leafModel of
-    YesNoControl dataValue ->
-      let
-        model_ = dataValue.model
-      in
-        YesNoControl
-          { dataValue | model =
-              { model_ | value = value
-              }
-          }
+    YesNoControl ( model, meta ) ->
+      YesNoControl
+        ( { model | value = value }
+        , meta
+        )
     _ -> leafModel
 
 
 
 setYesNoMaybe
   : Bool
-  -> LeafModels meta
-  -> LeafModels meta
+  -> LeafModels
+  -> LeafModels
 setYesNoMaybe value leafModel =
   case leafModel of
-    YesNoMaybeControl dataValue ->
-      let
-        model_ = dataValue.model
-      in
-        YesNoMaybeControl
-          { dataValue | model =
-              { model_ | value = Just value
-              }
-          }
+    YesNoMaybeControl ( model, meta ) ->
+      YesNoMaybeControl
+        ( { model | value = Just value }
+        , meta
+        )
     _ -> leafModel
+
