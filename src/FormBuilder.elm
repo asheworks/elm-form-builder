@@ -1,57 +1,5 @@
 module FormBuilder exposing (..)
 
--- module FormBuilder exposing
---   ( Id
---   , DataValue
-
---   , BranchModifiers
---   , LeafModifiers
-
---   , SectionZipper
---   , Predicate
-  
---   , Sections(..)
-
---   , DataNode
-
---   , Form
---   , ZipperState
---   , zipperState
---   , sectionZipper
---   , applySectionZipper
---   , dataZipper
---   , applyDataZipper
-
---   , section
---   , field
---   -- , byId
---   , toTree
---   , appendPath
---   , toForm
-
-
---   , getDataNodeByPathSegments
---   , getDataNodeByPath
---   , mapDataNodeByPath
---   )
-
--- , Selector
--- , toId
-
--- toId : String -> Maybe Id
--- toId value =
---   if value == "" then
---     Nothing
---   else
---     Just value
-
--- byId
---   : String
---   -> Tree ( Sections branch branchModel leaf leafModel model meta )
---   -> Zipper ( Sections branch branchModel leaf leafModel model meta )
--- byId key tree =
---   ( tree, [] )
-
 
 import MultiwayTree exposing (..)
 import MultiwayTreeZipper exposing (..)
@@ -66,35 +14,13 @@ type alias Id = String
 
 
 type alias DataValue model meta = ( model, meta )
-  -- { model : model
-  -- , meta : meta
-  -- }
 
 
 type alias Node branch branchModel leaf leafModel model meta =
   ( Sections branch branchModel leaf leafModel model meta, DataValue model meta )
 
 
--- type alias Node branch branchModel leaf leafModel model meta =
---   { data : DataValue model meta
---   , section : Sections branch branchModel leaf leafModel model meta
---   }
-
-
 type alias Modifiers model meta = List ( ( DataValue model meta -> DataValue model meta ) )
-
-
--- type alias BranchModifiers model meta = List ( ( DataValue model meta -> DataValue model meta ) )
-
--- type alias LeafModifiers model meta = List ( ( DataValue model meta -> DataValue model meta ) )
-
-
--- type alias SectionZipper branch branchModel leaf leafModel meta =
---   Zipper ( Sections branch branchModel leaf leafModel meta )
-
-
--- type alias Predicate branch branchModel leaf leafModel meta =
---   Zipper ( Sections branch branchModel leaf leafModel meta ) -> Bool
 
 
 type Sections branch branchModel leaf leafModel model meta
@@ -105,70 +31,14 @@ type Sections branch branchModel leaf leafModel model meta
 type alias DataValueMap branch branchModel leaf leafModel model meta =
   ( meta -> ( Sections branch branchModel leaf leafModel model meta ) -> model )
 
--- section
---   : Id
---   -> branch
---   -> List ( Sections branch branchModel leaf leafModel model meta )
---   -> List ( Modifier branch meta )
---   -> Sections branch branchModel leaf leafModel model meta
--- section id mods container children =
---   Branch id container mods children
-
-
--- -- -> LeafModifiers leaf meta
-
--- field
---   : Id
---   -> List ( Modifier branch meta )
---   -> leaf
---   -> Sections branch branchModel leaf leafModel model meta
--- field id mods data =
---   Leaf id data mods
-
-
--- toTree
---   : Sections branch branchModel leaf leafModel model meta
---   -> Tree ( Sections branch branchModel leaf leafModel model meta )
--- toTree section =
---   case section of
---     Branch _ _ _ children ->
---       Tree section <| List.map toTree children
-
---     Leaf _ _ _ ->
---       Tree section []
-
--- toDataNode
---   : ( meta
---       -> ( Sections branch branchModel leaf leafModel model meta )
---       -> model
---       )
---   -> meta
---   -> ZipperState
---   -> String
---   -> Zipper ( Sections branch branchModel leaf leafModel model meta )
---   -> Forest ( DataNode branch branchModel leaf leafModel model meta ) -- aka List ( DataNode branch leaf meta data )
---   -> Tree ( DataNode branch branchModel leaf leafModel model meta )
--- toDataNode dataValueMap meta state id zipper =
---   let
---     path = appendPath state.path id
-
---     dataValue = dataValueMap meta ( MultiwayTreeZipper.datum zipper )
---   in
---     Tree ( DataNode zipper path id dataValue )
-
 
 toNode
   : DataValueMap branch branchModel leaf leafModel model meta
   -> meta
   -> Sections branch branchModel leaf leafModel model meta
   -> Node branch branchModel leaf leafModel model meta
-  -- -> Node branch branchModel leaf leafModel model meta
 toNode dataValueMap meta section =
   ( section, ( dataValueMap meta section, meta ) )
-  -- , { model = dataValueMap meta section
-  --   , meta = meta
-  --   }
-  -- )
 
 
 toTree
@@ -193,18 +63,7 @@ appendPath path id =
     path ++ "." ++ id
 
 
--- type alias DataNode branch branchModel leaf leafModel model meta =
---   { section : Zipper ( Sections branch branchModel leaf leafModel model meta )
---   , path : String
---   , id : String
---   , model : model
---   }
-
 type alias Form branch branchModel leaf leafModel model meta = Tree ( Node branch branchModel leaf leafModel model meta )
--- type alias Form branch branchModel leaf leafModel model meta =
---   { sections : Zipper ( Sections branch branchModel leaf leafModel model meta )
---   , data : Zipper ( DataNode branch branchModel leaf leafModel model meta )
---   }
 
 
 type alias ZipperState =
@@ -218,33 +77,9 @@ type alias Mapper branch branchModel leaf leafModel model meta type_ =
   ( ZipperState -> String -> Zipper ( Node branch branchModel leaf leafModel model meta ) -> List type_ -> type_ )
 
 
--- type alias DataNodeMapper branch branchModel leaf leafModel model meta type_ =
---   ( ZipperState -> String -> Zipper ( DataNode branch branchModel leaf leafModel model meta ) -> List type_ -> type_ )
-
-
 zipperState : ZipperState
 zipperState =
   ZipperState 0 0 ""
-
-
--- toDataNode
---   : ( meta
---       -> ( Sections branch branchModel leaf leafModel model meta )
---       -> model
---       )
---   -> meta
---   -> ZipperState
---   -> String
---   -> Zipper ( Sections branch branchModel leaf leafModel model meta )
---   -> Forest ( DataNode branch branchModel leaf leafModel model meta ) -- aka List ( DataNode branch leaf meta data )
---   -> Tree ( DataNode branch branchModel leaf leafModel model meta )
--- toDataNode dataValueMap meta state id zipper =
---   let
---     path = appendPath state.path id
-
---     dataValue = dataValueMap meta ( MultiwayTreeZipper.datum zipper )
---   in
---     Tree ( DataNode zipper path id dataValue )
 
 
 sectionZipper
@@ -284,6 +119,46 @@ applySectionZipper mapper zipper =
   sectionZipper zipperState mapper zipper
 
 
+toSectionByPathIndex
+  : ZipperState
+  -> String
+  -> Zipper ( Node branch branchModel leaf leafModel model meta )
+  -> List ( List ( String, ( Zipper ( Node branch branchModel leaf leafModel model meta ) ) ) )
+  -> List ( String, ( Zipper ( Node branch branchModel leaf leafModel model meta ) ) )
+toSectionByPathIndex state id zipper =
+  let
+    path_ = appendPath state.path id
+  in
+    (\ children ->
+      ( List.concat children )
+      |> (::) ( path_, zipper )
+    )
+
+
+toDataByPathIndex
+  : ZipperState
+  -> String
+  -> Zipper ( Node branch branchModel leaf leafModel model meta )
+  -> List ( List ( String, ( Zipper ( Node branch branchModel leaf leafModel model meta ) ) ) )
+  -> List ( String, Zipper ( Node branch branchModel leaf leafModel model meta ) )
+toDataByPathIndex state id zipper =
+  let
+    path_ = appendPath state.path id
+  in
+    (\ children ->
+      ( List.concat children )
+      |> (::) ( path_, zipper )
+    )
+
+
+-- type alias SectionZipper branch branchModel leaf leafModel meta =
+--   Zipper ( Sections branch branchModel leaf leafModel meta )
+
+
+-- type alias Predicate branch branchModel leaf leafModel meta =
+--   Zipper ( Sections branch branchModel leaf leafModel meta ) -> Bool
+
+
 -- dataZipper
 --   : ZipperState
 --   -> Mapper branch branchModel leaf leafModel model meta type_
@@ -317,37 +192,6 @@ applySectionZipper mapper zipper =
 -- applyDataZipper mapper tree =
 --   dataZipper zipperState mapper ( tree, [] )
 
-
-toSectionByPathIndex
-  : ZipperState
-  -> String
-  -> Zipper ( Node branch branchModel leaf leafModel model meta )
-  -> List ( List ( String, ( Zipper ( Node branch branchModel leaf leafModel model meta ) ) ) )
-  -> List ( String, ( Zipper ( Node branch branchModel leaf leafModel model meta ) ) )
-toSectionByPathIndex state id zipper =
-  let
-    path_ = appendPath state.path id
-  in
-    (\ children ->
-      ( List.concat children )
-      |> (::) ( path_, zipper )
-    )
-
-
-toDataByPathIndex
-  : ZipperState
-  -> String
-  -> Zipper ( Node branch branchModel leaf leafModel model meta )
-  -> List ( List ( String, ( Zipper ( Node branch branchModel leaf leafModel model meta ) ) ) )
-  -> List ( String, Zipper ( Node branch branchModel leaf leafModel model meta ) )
-toDataByPathIndex state id zipper =
-  let
-    path_ = appendPath state.path id
-  in
-    (\ children ->
-      ( List.concat children )
-      |> (::) ( path_, zipper )
-    )
 
 
 -- getDataNodeByPathSegments
@@ -416,22 +260,3 @@ toDataByPathIndex state id zipper =
 --         )
 --     |> Maybe.withDefault form
 
-
--- toForm
---   : ( meta
---       -> ( Sections branch branchModel leaf leafModel model meta )
---       -> model
---       )
---   -> Sections branch branchModel leaf leafModel model meta
---   -> meta
---   -> Form branch branchModel leaf leafModel model meta
--- toForm dataTypeMap node meta =
---   let
---     sections : Zipper ( Sections branch branchModel leaf leafModel model meta )
---     sections = ( toTree node, [] )
-
---     data : Zipper ( DataNode branch branchModel leaf leafModel model meta )
---     data = ( applySectionZipper ( toDataNode dataTypeMap meta ) sections, [] )
-
---   in
---     Form sections data

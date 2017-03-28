@@ -55,7 +55,8 @@ type alias RendererDataNode =
   Node BranchFacts BranchModels LeafFacts LeafModels Models Meta
 
 
-type alias RendererDataValue model = DataValue model Meta
+type alias RendererDataValue model =
+  DataValue model Meta
 
 
 type alias BranchMapper =
@@ -243,54 +244,6 @@ type LeafFacts
   | YesNoMaybe Title ( Modifiers YesNoMaybeModel Meta )
 
 
--- updateNode
---   : Model meta
---   -> String
---   -> DataNodeMapper meta
---   -> Model meta
--- updateNode model path mapper =
---   let
---     updated = mapDataNodeByPath model.form path mapper
---   in
---     { model | form = updated
---     }
-
-
--- setBranch
---   : BranchMapper meta
---   -> DataNodeMapper meta
--- setBranch mapper =
---   (\ node ->
---       let
---         model = node.model
---       in
---         { node | model =
---           case node.model of
---             BranchModel branchModel ->
---               BranchModel <| mapper branchModel
-
---             _ -> node.model
---         }
---   )
-
--- setLeaf
---   : LeafMapper meta
---   -> DataNodeMapper meta
--- setLeaf mapper =
---   (\ node ->
---       let
---         model = node.model
---       in
---         { node | model =
---             case node.model of
---               LeafModel leafModel ->
---                 LeafModel <| mapper leafModel
-
---               _ -> node.model
---         }
---   )
-
-
 
 applyMods
   : model
@@ -312,6 +265,7 @@ toDataValue
   -> Models
 toDataValue meta node =
   case node of
+  
     Branch _ _ branch _ ->
       BranchModel <|
         case branch of

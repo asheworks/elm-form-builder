@@ -6,6 +6,7 @@ module Renderers.Update exposing
 
 import MultiwayTreeZipper exposing (..)
 import Renderers.Model exposing (..)
+import FormBuilder exposing (..)
 
 import Set exposing (..)
 
@@ -29,44 +30,46 @@ commandMap model command =
     --   RadioField_Updated id value
 
 
-
-
-
 eventMap
   : Model
   -> Event
-  ->  ( Model
-      , Maybe Effect
-      )
+  ->  ( Model, Maybe Effect )
 eventMap model event =
   let
-    t = Debug.log "Event Map" event
+    ( ( node, crumbs ) as zipper, map ) =
+        case event of
+
+          Checkbox_Updated zipper value ->
+            ( zipper, ( setCheckbox value ) )
+
+          TextInput_Updated zipper value ->
+            ( zipper, ( setTextInput value ) )
+
+          YesNo_Updated zipper value ->
+            ( zipper, ( setYesNo value ) )
+
+          YesNoMaybe_Updated zipper value ->
+            ( zipper, ( setYesNoMaybe value ) )
+    
+
+    zipper_ = updateDatum
+          (\ ( ( node, ( model, meta ) ) as zipper ) ->
+            let
+              model_ =
+                case model of
+                    BranchModel m -> model
+                    LeafModel m -> LeafModel ( map m )
+            in
+              ( node, ( model_, meta ) )
+          )
+          zipper
+
+    tree = zipper_
+      |> Maybe.andThen goToRoot
+      |> Maybe.map (\ ( tree, _ ) -> tree )
   in
-    ( model, Nothing )
-  -- let
-  --   zipper_ =
-  --     ( case event of
+    ( { model | form = tree }, Nothing )
 
-  --         Checkbox_Updated ( zipper, data ) value ->
-  --           updateDatum ( setCheckbox value ) zipper
-
-  --         TextInput_Updated ( zipper, data ) value ->
-  --           updateDatum ( setTextInput value ) zipper
-
-  --         YesNo_Updated ( zipper, data ) value ->
-  --           updateDatum ( setYesNo value ) zipper
-
-  --         YesNoMaybe_Updated ( zipper, data ) value ->
-  --           updateDatum ( setYesNoMaybe value ) zipper
-  --     )
-    
-  --   -- ( tree, _ ) = zipper_
-  --   -- tree = zipper
-  --   --   |> Maybe.andThen goToRoot
-  --   --   |> Maybe.map (\ ( tree, _ ) -> tree )
-  -- in
-    -- ( { model | form = Nothing }, Nothing )
-    
 
 setCheckbox
   : String

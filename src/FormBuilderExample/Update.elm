@@ -24,14 +24,16 @@ init model =
 
 commandMap : Model -> Command -> Event
 commandMap model command =
-  case Debug.log "Example - CommandMap" command of
+  -- case Debug.log "Example - CommandMap" command of
+  case command of
     FormBuilder_Command command_ ->
       FormBuilder_Event <| FormBuilder.commandMap model.formBuilder command_
 
 
 eventMap : Model -> Event -> ( Model, Maybe Effect )
 eventMap model event =
-  case Debug.log "Example - EventMap" event of
+  -- case Debug.log "Example - EventMap" event of
+  case event of
     FormBuilder_Event event_ ->
       eventBinder
         FormBuilder.eventMap
