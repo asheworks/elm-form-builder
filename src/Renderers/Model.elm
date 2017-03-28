@@ -396,7 +396,7 @@ toDataValue meta node =
         case leaf of
 
           Checkbox title options mods ->
-            CheckboxControl <| applyMods ( CheckboxModel title options Nothing ) meta mods
+            CheckboxControl <| applyMods ( CheckboxModel title options Nothing) meta mods
 
           MultiUpload title mods ->
             MultiUploadControl <| applyMods ( MultiUploadModel title Set.empty ) meta mods

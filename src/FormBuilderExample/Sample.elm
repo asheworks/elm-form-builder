@@ -49,14 +49,14 @@ sample =
   section "sample" []
     ( Header "Sample Form" [] )
 
-    [ version
+    [ compositeSection
     , menu
     , details
     , definitions
     , uploadSection
-    , compositeSection
     , questionsSection
     , optionalListSection
+    , version
     ]
 
 
@@ -200,13 +200,13 @@ compositeSection =
 
     [ infoSection
         "ownHome"
-        "Does you own your home?"
+        "Do you own your home?"
         Nothing
         Nothing
 
         [ infoSection
             "mortgage"
-            "Does you have a mortgage?"
+            "Do you have a mortgage?"
             Nothing
             Nothing
             []

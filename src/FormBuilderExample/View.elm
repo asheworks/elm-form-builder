@@ -8,9 +8,6 @@ import Renderers.UIRenderer exposing (..)
 
 --
 
--- import FormBuilderExample.InfoSec as FormBuilder
-
---
 
 view : Model -> Html Command
 view model =
