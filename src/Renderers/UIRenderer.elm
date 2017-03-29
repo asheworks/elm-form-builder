@@ -34,7 +34,7 @@ render model =
   in
     model.form |> Maybe.map
       (\ form ->
-          applySectionZipper mapper ( form, [] )
+          applySectionZipper [] "" mapper ( form, [] )
       )
 
 
@@ -52,7 +52,7 @@ checkVisible placeholder meta control =
 
 renderNode
   : Model
-  -> ZipperState
+  -> String
   -> String
   -> RendererZipper
   -> List ( Html Command )

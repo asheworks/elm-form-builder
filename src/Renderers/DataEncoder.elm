@@ -14,22 +14,21 @@ encode
   -> Encode.Value
 encode model =
   let
-    zipForm = applySectionZipper encodeNode
+    zipForm = applySectionZipper [] "" encodeNode
 
     do : ( RendererForm -> Maybe ( String, Encode.Value ) )
     do = (\ form -> zipForm ( form, [] ) )
 
     data =
       model.form
-        |> Maybe.andThen do--(\ form -> zipForm ( form, [] ) )
-        -- |> Maybe.map zipForm
+        |> Maybe.andThen do
         |> Maybe.withDefault ( "infosec", Encode.object [] )
 
   in
     Encode.object [ data ]
 
 
-encodeBranch : ZipperState -> String -> List ( String, Encode.Value ) -> model -> ( model -> Maybe Encode.Value ) -> Maybe ( String, Encode.Value)
+encodeBranch : String -> String -> List ( String, Encode.Value ) -> model -> ( model -> Maybe Encode.Value ) -> Maybe ( String, Encode.Value)
 encodeBranch state id children model encodeModel =
     if List.length children > 0 then
       Just ( id, Encode.object children )
@@ -37,7 +36,7 @@ encodeBranch state id children model encodeModel =
       Nothing
 
 
-encodeControl : ZipperState -> String -> model -> ( model -> Maybe Encode.Value ) -> Maybe ( String, Encode.Value )
+encodeControl : String -> String -> model -> ( model -> Maybe Encode.Value ) -> Maybe ( String, Encode.Value )
 encodeControl state id model encodeModel =
   encodeModel model
     |> Maybe.map
@@ -48,7 +47,7 @@ encodeControl state id model encodeModel =
         )
 
 encodeNode
-  : ZipperState
+  : String
   -> String
   -> RendererZipper
   -> List ( Maybe ( String, Encode.Value ) )
@@ -110,7 +109,6 @@ encodeNode state id zipper children =
 encodeEmpty : model -> Maybe Encode.Value
 encodeEmpty model =
   Nothing
-  -- Just <| Encode.object []
 
 
 encodeCheckboxControl : CheckboxModel -> Maybe Encode.Value
@@ -124,10 +122,6 @@ encodeCheckboxControl model =
             else
               Just <| Encode.list ( List.map Encode.string items )
         )
-  -- if List.length ( Set.toList model.values ) == 0 then
-  --   Nothing
-  -- else
-  --   Just <| Encode.list ( List.map Encode.string ( Maybe.withDefault [] <| Maybe.map Set.toList model.values ) )
 
 
 encodeMultiUploadControl : MultiUploadModel -> Maybe Encode.Value
@@ -170,6 +164,16 @@ encodeYesNoControl model =
 encodeYesNoMaybeControl : YesNoMaybeModel -> Maybe Encode.Value
 encodeYesNoMaybeControl model =
   Maybe.map Encode.bool model.value
+
+
+-- Just <| Encode.object []
+
+  -- if List.length ( Set.toList model.values ) == 0 then
+  --   Nothing
+  -- else
+  --   Just <| Encode.list ( List.map Encode.string ( Maybe.withDefault [] <| Maybe.map Set.toList model.values ) )
+
+
   -- Just <| Maybe.withDefault Encode.null ( Maybe.map Encode.bool model.value )
 
 

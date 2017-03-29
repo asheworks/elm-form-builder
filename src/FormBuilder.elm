@@ -66,28 +66,21 @@ appendPath path id =
 type alias Form branch branchModel leaf leafModel model meta = Tree ( Node branch branchModel leaf leafModel model meta )
 
 
-type alias ZipperState =
-  { depth : Int
-  , index : Int
-  , path : String
-  }
+type alias Mapper context branch branchModel leaf leafModel model meta type_ =
+  ( context -> String -> Zipper ( Node branch branchModel leaf leafModel model meta ) -> List type_ -> type_ )
 
 
-type alias Mapper branch branchModel leaf leafModel model meta type_ =
-  ( ZipperState -> String -> Zipper ( Node branch branchModel leaf leafModel model meta ) -> List type_ -> type_ )
-
-
-zipperState : ZipperState
-zipperState =
-  ZipperState 0 0 ""
+type alias StateMap context branch branchModel leaf leafModel model meta =
+  ( Int -> context -> Zipper ( Node branch branchModel leaf leafModel model meta ) -> context )
 
 
 sectionZipper
-  : ZipperState
-  -> Mapper branch branchModel leaf leafModel model meta type_
+  : List ( StateMap context branch branchModel leaf leafModel model meta )
+  -> context
+  -> Mapper context branch branchModel leaf leafModel model meta type_
   -> Zipper ( Node branch branchModel leaf leafModel model meta )
   -> type_
-sectionZipper state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+sectionZipper stateMaps state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
   case node of
     ( Leaf id _ _, _ ) ->
       mapper state id zipper []
@@ -98,13 +91,13 @@ sectionZipper state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as z
             (\ index _ ->
                 goToChild index zipper
                   |> Maybe.map
-                      ( sectionZipper
-                          { state
-                              | depth = state.depth + 1
-                              , index = index
-                              , path = appendPath state.path id
-                          }
-                          mapper
+                      ( sectionZipper stateMaps ( List.foldr (\ map state_ -> map index state_ zipper ) state stateMaps ) mapper
+                          -- { state
+                          --     | depth = state.depth + 1
+                          --     , index = index
+                          --     , path = appendPath state.path id
+                          -- }
+                          -- mapper
                       )
             )
         |> List.filterMap identity
@@ -112,15 +105,106 @@ sectionZipper state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as z
 
 
 applySectionZipper
-  : Mapper branch branchModel leaf leafModel model meta type_
+  : List ( StateMap context branch branchModel leaf leafModel model meta )
+  -> context
+  -> Mapper context branch branchModel leaf leafModel model meta type_
   -> Zipper ( Node branch branchModel leaf leafModel model meta )
   -> type_
-applySectionZipper mapper zipper =
-  sectionZipper zipperState mapper zipper
+applySectionZipper stateMaps state mapper zipper =
+  sectionZipper stateMaps state mapper zipper
+
+
+-- zipperState : ZipperState
+-- zipperState =
+--   ZipperState 0 0 ""
+
+
+-- sectionZipper
+--   : ZipperState
+--   -> Mapper branch branchModel leaf leafModel model meta type_
+--   -> Zipper ( Node branch branchModel leaf leafModel model meta )
+--   -> type_
+-- sectionZipper state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+--   case node of
+--     ( Leaf id _ _, _ ) ->
+--       mapper state id zipper []
+      
+--     ( Branch id _ _ _, _ ) ->
+--       children
+--         |> List.indexedMap
+--             (\ index _ ->
+--                 goToChild index zipper
+--                   |> Maybe.map
+--                       ( sectionZipper
+--                           { state
+--                               | depth = state.depth + 1
+--                               , index = index
+--                               , path = appendPath state.path id
+--                           }
+--                           mapper
+--                       )
+--             )
+--         |> List.filterMap identity
+--         |> mapper state id zipper
+
+
+-- applySectionZipper
+--   : Mapper branch branchModel leaf leafModel model meta type_
+--   -> Zipper ( Node branch branchModel leaf leafModel model meta )
+--   -> type_
+-- applySectionZipper mapper zipper =
+--   sectionZipper zipperState mapper zipper
+
+
+type alias DepthState context = { context | depth : Int }
+
+depthStateMap : StateMap ( DepthState context ) branch branchModel leaf leafModel model meta 
+depthStateMap index state ( ( ( ( Tree node _ ) as tree ), crumbs ) as zipper ) =
+  case node of
+    ( Leaf _ _ _, _ ) -> state
+    ( Branch _ _ _ _, _ ) ->
+      { state
+          | depth = state.depth + 1
+      }
+
+type alias IndexState context = { context | index : Int }
+
+indexStateMap : StateMap ( IndexState context ) branch branchModel leaf leafModel model meta 
+indexStateMap index state ( ( ( ( Tree node _ ) as tree ), crumbs ) as zipper ) =
+  case node of
+    ( Leaf _ _ _, _ ) -> state
+    ( Branch _ _ _ _, _ ) ->
+      { state
+          | index = state.index
+      }
+
+type alias PathState context = { context | path : String }
+
+pathStateMap : StateMap ( PathState context ) branch branchModel leaf leafModel model meta 
+pathStateMap index state ( ( ( ( Tree node _ ) as tree ), crumbs ) as zipper ) =
+  case node of
+    ( Leaf _ _ _, _ ) -> state
+    ( Branch id _ _ _, _ ) ->
+      { state
+          | path = appendPath state.path id
+      }
+
+
+
+type alias DepthIndexPathState context =
+  { depth : Int
+  , index : Int
+  , path : String
+  , context : context
+  }
+
+depthIndexPathState : context -> DepthIndexPathState context
+depthIndexPathState context =
+  DepthIndexPathState 0 0 "" context
 
 
 toSectionByPathIndex
-  : ZipperState
+  : DepthIndexPathState String
   -> String
   -> Zipper ( Node branch branchModel leaf leafModel model meta )
   -> List ( List ( String, ( Zipper ( Node branch branchModel leaf leafModel model meta ) ) ) )
@@ -136,7 +220,7 @@ toSectionByPathIndex state id zipper =
 
 
 toDataByPathIndex
-  : ZipperState
+  : DepthIndexPathState String
   -> String
   -> Zipper ( Node branch branchModel leaf leafModel model meta )
   -> List ( List ( String, ( Zipper ( Node branch branchModel leaf leafModel model meta ) ) ) )
