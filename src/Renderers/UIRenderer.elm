@@ -107,7 +107,8 @@ renderNode model state id zipper children =
             mod meta <| textInput id zipper model.title model.value model.placeholder False
 
           TextLabelControl ( model, meta ) ->
-            mod meta <| textLabel id zipper model.title model.value False
+            mod meta <| textLabel id zipper model.title ( Maybe.withDefault "" model.default ) False
+            -- mod meta <| textLabel id zipper model.title model.value False
 
           YesNoControl ( model, meta ) ->
             mod meta <| yesNo id zipper model.value

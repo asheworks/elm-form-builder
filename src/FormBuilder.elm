@@ -151,6 +151,44 @@ toDataByPathIndex state id zipper =
     )
 
 
+-- encodeZipper
+--   : ZipperState
+--   -> Mapper branch branchModel leaf leafModel model meta type_
+--   -> Zipper ( Node branch branchModel leaf leafModel model meta )
+--   -> type_
+-- encodeZipper state mapper ( ( ( ( Tree node children ) as tree ), crumbs ) as zipper ) =
+--   case node of
+--     ( Leaf id _ _, _ ) ->
+--       mapper state id zipper []
+      
+--     ( Branch id _ _ _, _ ) ->
+--       children
+--         |> List.indexedMap
+--             (\ index _ ->
+--                 goToChild index zipper
+--                   |> Maybe.map
+--                       ( sectionZipper
+--                           { state
+--                               | depth = state.depth + 1
+--                               , index = index
+--                               , path = appendPath state.path id
+--                           }
+--                           mapper
+--                       )
+--             )
+--         |> List.filterMap identity
+--         |> mapper state id zipper
+
+
+-- applyEncodeZipper
+--   : Mapper branch branchModel leaf leafModel model meta type_
+--   -> Zipper ( Node branch branchModel leaf leafModel model meta )
+--   -> type_
+-- applyEncodeZipper mapper zipper =
+--   sectionZipper zipperState mapper zipper
+
+
+
 -- type alias SectionZipper branch branchModel leaf leafModel meta =
 --   Zipper ( Sections branch branchModel leaf leafModel meta )
 

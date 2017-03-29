@@ -156,10 +156,25 @@ type alias YesNoMaybeModel =
   }
 
 
+type alias ValueDim target type_ =
+  { target
+      | value : type_
+  }
+
+
+value : type_ -> DataValue ( ValueDim model type_ ) meta -> DataValue ( ValueDim model type_ ) meta
+value value ( model, meta ) =
+  ( { model
+      | value = value
+    }
+  , meta
+  )
+
+
 type alias DefaultDim target type_ =
   { target
       | default : Maybe type_
-      , value : type_
+      -- , value : type_
   }
 
 
@@ -167,7 +182,7 @@ default : type_ -> DataValue ( DefaultDim model type_ ) meta -> DataValue ( Defa
 default value ( model, meta ) =
   ( { model
       | default = Just value
-      , value = value
+      -- , value = value
     }
   , meta
   )
@@ -265,7 +280,7 @@ toDataValue
   -> Models
 toDataValue meta node =
   case node of
-  
+
     Branch _ _ branch _ ->
       BranchModel <|
         case branch of
