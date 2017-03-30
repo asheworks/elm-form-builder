@@ -9,6 +9,7 @@ import Json.Encode as Encode exposing (..)
 import Json.Decode as Decode exposing (..)
 
 import Renderers.DataDecoder as DataDecoder
+import Renderers.DataCompare as DataCompare
 --
 
 decode : Context -> Model
@@ -24,11 +25,16 @@ encode _ =
 init : Model -> ( Model, Maybe effect )
 init model =
   let
-    data = Decode.decodeString Decode.value "{\"infosec\":{\"details\":{\"companyName\":\"a\",\"contactName\":\"a\"},\"services\":{\"offered\":{\"selected\":[\"other\"],\"description\":\"asdf\"}}}}"
+    data = Decode.decodeString Decode.value "{\"meta\":{},\"data\":{\"infosec\":{},\"details\":{\"contactName\":\"a\",\"companyName\":\"a\"},\"services\":{\"offered\":{\"description\":\"asdf\",\"selected\":[\"other\"]}}}}"
+    -- data = Decode.decodeString Decode.value "{\"infosec\":{\"details\":{\"companyName\":\"a\",\"contactName\":\"a\"},\"services\":{\"offered\":{\"selected\":[\"other\"],\"description\":\"asdf\"}}}}"
     data_ = Result.withDefault ( Encode.string "fail" ) data
     t = Debug.log "Decode Data" data_
 
     model_ = DataDecoder.decodeForm data_ model.formBuilder.state
+
+    equal = DataCompare.areEqual model_.form model_.form
+    u = Debug.log "Equal" equal
+    
       -- case DataDecoder.decode data model.formBuilder.state of
       --   Nothing -> model.formBuilder.state
       --   Just result -> result

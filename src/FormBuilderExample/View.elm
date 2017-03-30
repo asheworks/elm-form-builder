@@ -14,11 +14,11 @@ import Json.Encode as Encode
 view : Model -> Html Command
 view model =
   let
-    data_ = encode model.formBuilder.state
+    data_ = encodeForm model.formBuilder.state
 
     string_ = Encode.encode 0 data_
 
-    t = Debug.log "DATA" string_
+    -- t = Debug.log "DATA" string_
 
     view_ =
       render model.formBuilder.state

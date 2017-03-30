@@ -9,10 +9,10 @@ import FormBuilder exposing (..)
 import Renderers.Model exposing (..)
 
 
-encode
+encodeForm
   : Model
   -> Encode.Value
-encode model =
+encodeForm model =
   let
     zipForm = applySectionZipper [] "" encodeNode
 

@@ -44,10 +44,11 @@ checkVisible
   -> Html Command
   -> Html Command
 checkVisible placeholder meta control =
-  if meta.visible then
-    control
-  else
-    placeholder
+  control
+  -- if meta.visible then
+  --   control
+  -- else
+  --   placeholder
 
 
 renderNode
@@ -93,12 +94,12 @@ renderNode model state id zipper children =
             mod meta <| checkbox id zipper ( Dict.fromList model.options ) ( Maybe.withDefault Set.empty model.values )
 
           MultiUploadControl ( model, meta ) ->
-            mod meta <|
-              (
-                ( Set.toList model.values ) ++ [ "FileUpload: " ++ id ]
-                    |> List.map Html.text
-                    |> div []
-              )
+            mod meta <| div [] [ Html.text "PLEASE SUBMIT RELEVANT SUPPORTING FILES VIA EMAIL" ]
+              -- (
+              --   ( Set.toList model.values ) ++ [ "FileUpload: " ++ id ]
+              --       |> List.map Html.text
+              --       |> div []
+              -- )
 
           RadioControl ( model, meta ) ->
             mod meta <| checkbox id zipper ( Dict.fromList model.options ) Set.empty--[ model.value ]
