@@ -3,6 +3,7 @@ module Renderers.UIRenderer
         ( render
         )
 
+import Tuple exposing (..)
 import Char exposing (..)
 import Css exposing (..)
 import Dict exposing (..)
@@ -13,6 +14,7 @@ import MultiwayTreeZipper exposing (..)
 import Set exposing (..)
 import FormBuilder exposing (..)
 import Renderers.Model exposing (..)
+import DictList exposing (..)
 import UI as UI
 import UI.Input
 import UI.FieldLabel
@@ -51,6 +53,15 @@ checkVisible placeholder meta control =
         control
     else
         placeholder
+
+
+preserveOrder : List ( String, String ) -> List ( String, String )
+preserveOrder data =
+    data
+        |> List.indexedMap
+            (\index item ->
+                Tuple.mapFirst (\key -> (toString index) ++ "_" ++ key) item
+            )
 
 
 renderNode :
@@ -93,10 +104,11 @@ renderNode model interceptMapper state id zipper children =
             ( _, ( (LeafModel leaf) as model, _ ) ) ->
                 case leaf of
                     CheckboxControl ( model, meta ) ->
-                        mod meta <| checkbox id zipper (Dict.fromList model.options) (Maybe.withDefault Set.empty model.values)
+                        -- mod meta <| checkbox id zipper (Dict.fromList <| preserveOrder model.options) (Maybe.withDefault Set.empty model.values)
+                        mod meta <| checkbox id zipper (DictList.fromList model.options) (Maybe.withDefault Set.empty model.values)
 
                     MultiUploadControl ( model, meta ) ->
-                        mod meta <| div [] [ Html.text "PLEASE SUBMIT RELEVANT SUPPORTING FILES VIA EMAIL" ]
+                        mod meta <| div [] [ Html.text "PLEASE SUBMIT RELEVANT SUPPORTING FILES VIA EMAIL TO:  ADMIN@ASHELABS.COM" ]
 
                     -- (
                     --   ( Set.toList model.values ) ++ [ "FileUpload: " ++ id ]
@@ -104,7 +116,8 @@ renderNode model interceptMapper state id zipper children =
                     --       |> div []
                     -- )
                     RadioControl ( model, meta ) ->
-                        mod meta <| checkbox id zipper (Dict.fromList model.options) Set.empty
+                        -- mod meta <| checkbox id zipper (Dict.fromList <| preserveOrder model.options) Set.empty
+                        mod meta <| checkbox id zipper (DictList.fromList model.options) Set.empty
 
                     --[ model.value ]
                     TextInputControl ( model, meta ) ->
@@ -210,7 +223,7 @@ bullets id zipper title children =
 checkbox :
     String
     -> RendererZipper
-    -> Dict String String
+    -> DictList String String
     -> Set String
     -> Html Command
 checkbox id zipper options selected =
@@ -218,7 +231,7 @@ checkbox id zipper options selected =
         { id = id
         , values =
             options
-                |> Dict.toList
+                |> DictList.toList
                 |> List.map
                     (\( key, value ) ->
                         { key = key

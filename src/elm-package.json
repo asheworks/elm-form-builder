@@ -16,6 +16,7 @@
         "elm-lang/navigation": "2.0.0 <= v < 3.0.0",
         "elm-lang/virtual-dom": "2.0.0 <= v < 3.0.0",
         "NoRedInk/elm-decode-pipeline": "3.0.0 <= v < 4.0.0",
+        "Gizra/elm-dictlist": "1.0.0 <= v < 2.0.0",
         "rtfeldman/elm-css": "7.0.0 <= v < 8.0.0",
         "rtfeldman/elm-css-util": "1.0.2 <= v < 2.0.0",
         "rtfeldman/elm-css-helpers": "2.0.1 <= v < 3.0.0",
