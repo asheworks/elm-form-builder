@@ -12,6 +12,7 @@ type Command
     | TextInput_Update RendererZipper String
     | YesNo_Update RendererZipper Bool
     | YesNoMaybe_Update RendererZipper Bool
+    | KeyDown_Update RendererZipper Int
 
 
 
@@ -24,6 +25,7 @@ type Event
     | TextInput_Updated RendererZipper String
     | YesNo_Updated RendererZipper Bool
     | YesNoMaybe_Updated RendererZipper Bool
+    | KeyDown_Updated RendererZipper Int
 
 
 
@@ -184,7 +186,6 @@ type alias DefaultDim target type_ =
     { target
         | default :
             Maybe type_
-            -- , value : type_
     }
 
 
@@ -193,7 +194,6 @@ default value ( model, meta ) =
     ( { model
         | default =
             Just value
-            -- , value = value
       }
     , meta
     )

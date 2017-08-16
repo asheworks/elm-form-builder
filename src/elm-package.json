@@ -5,6 +5,7 @@
     "license": "BSD3",
     "source-directories": [
         "./",
+        "../../../ashalexe/infosec-web/src/InfoSecForm",
         "../../elm-cqrs/src",
         "../../elm-ui/src"
     ],

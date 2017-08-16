@@ -16,7 +16,7 @@ module FormBuilderExample.Model
 import CQRS exposing (State)
 import FormBuilder exposing (..)
 import Renderers.Model as Renderers
-import FormBuilderExample.InfoSec exposing (..)
+import InfoSecForm.VV1_0_0 exposing (..)
 
 
 formDef =

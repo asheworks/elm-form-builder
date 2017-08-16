@@ -1,4 +1,4 @@
-module Renderers.UIRenderer
+module Renderers.CSVRenderer
     exposing
         ( render
         )
@@ -15,10 +15,6 @@ import Set exposing (..)
 import FormBuilder exposing (..)
 import Renderers.Model exposing (..)
 import DictList exposing (..)
-import UI as UI
-import UI.Input
-import UI.FieldLabel
-import UI.YesNo as UI
 
 
 styles : List Mixin -> Html.Attribute msg
@@ -48,11 +44,73 @@ checkVisible :
     -> Html Command
     -> Html Command
 checkVisible placeholder meta control =
-    -- control
-    if meta.visible then
-        control
+    control
+
+
+type alias PartialDataTemplate =
+    { id : String
+    , section : String
+    , title : String
+    , fieldType : String
+    , fieldValues : String
+    , default : String
+    , helpText : String
+    }
+
+
+type alias ControlDataTemplate =
+    { fieldType : String
+    , fieldValues : String
+    , default : String
+    , helpText : String
+    }
+
+
+type alias FullDataTemplate =
+    { id : String
+    , section : String
+    , title : String
+    , fieldType : String
+    , fieldValues : String
+    , default : String
+    , instructions : String
+    , requiredOptions : String
+    , conditions : String
+    , constraints : String
+    , errorMessage : String
+    , helpText : String
+    , notes : String
+    , mobileKeypad : String
+    }
+
+
+type DataTemplates
+    = Partial PartialDataTemplate
+    | Control ControlDataTemplate
+    | Full FullDataTemplate
+
+
+stripChars : String -> String
+stripChars value =
+    if not <| String.contains "- " value then
+        value
     else
-        placeholder
+        String.dropLeft 2 value
+
+
+toDataTemplate :
+    DataTemplates
+    -> Html msg
+toDataTemplate template =
+    case template of
+        Partial data ->
+            div [] [ Html.text <| "\"" ++ data.id ++ "\",\"" ++ data.section ++ "\",\"" ++ data.title ++ "\",,,\"" ++ data.fieldType ++ "\",\"" ++ data.fieldValues ++ "\",,,\"" ++ (stripChars data.default) ++ "\",\"" ++ data.helpText ++ "\"" ]
+
+        Control data ->
+            div [] [ Html.text <| ",,,,,\"" ++ data.fieldType ++ "\",\"" ++ data.fieldValues ++ "\",,,\"" ++ (stripChars data.default) ++ "\",\"" ++ data.helpText ++ "\"" ]
+
+        Full data ->
+            div [] []
 
 
 preserveOrder : List ( String, String ) -> List ( String, String )
@@ -76,12 +134,6 @@ renderNode model interceptMapper state id zipper children =
     let
         mod =
             checkVisible (div [] [])
-
-        --children)
-        -- <|
-        --     div [] <|
-        --         [ Html.text "HIDDEN" ]
-        --             ++ children
     in
         case MultiwayTreeZipper.datum (interceptMapper id zipper) of
             ( _, ( BranchModel branch, _ ) ) ->
@@ -104,29 +156,21 @@ renderNode model interceptMapper state id zipper children =
             ( _, ( (LeafModel leaf) as model, _ ) ) ->
                 case leaf of
                     CheckboxControl ( model, meta ) ->
-                        -- mod meta <| checkbox id zipper (Dict.fromList <| preserveOrder model.options) (Maybe.withDefault Set.empty model.values)
                         mod meta <| checkbox id zipper (DictList.fromList model.options) (Maybe.withDefault Set.empty model.values)
 
                     MultiUploadControl ( model, meta ) ->
-                        mod meta <| div [] [ Html.text "PLEASE SUBMIT RELEVANT SUPPORTING FILES VIA EMAIL TO:  INFOSEC@ASHELABS.COM" ]
+                        mod meta <| div [] []
 
-                    -- (
-                    --   ( Set.toList model.values ) ++ [ "FileUpload: " ++ id ]
-                    --       |> List.map Html.text
-                    --       |> div []
-                    -- )
+                    -- Html.text "PLEASE SUBMIT RELEVANT SUPPORTING FILES VIA EMAIL TO:  INFOSEC@ASHELABS.COM" ]
                     RadioControl ( model, meta ) ->
-                        -- mod meta <| checkbox id zipper (Dict.fromList <| preserveOrder model.options) Set.empty
                         mod meta <| checkbox id zipper (DictList.fromList model.options) Set.empty
 
-                    --[ model.value ]
                     TextInputControl ( model, meta ) ->
                         mod meta <| textInput id zipper model.title model.value model.placeholder meta.labelColorHex False
 
                     TextLabelControl ( model, meta ) ->
                         mod meta <| textLabel id zipper model.title (Maybe.withDefault "" model.default) Nothing False
 
-                    -- mod meta <| textLabel id zipper model.title model.value False
                     YesNoControl ( model, meta ) ->
                         mod meta <| yesNo id zipper model.value
 
@@ -140,13 +184,7 @@ yesNo :
     -> Bool
     -> Html Command
 yesNo id zipper value =
-    UI.yesNoField
-        { id = id
-        , yesLabel = "Yes"
-        , noLabel = "No"
-        , value = Just value
-        , onChange = YesNo_Update zipper
-        }
+    toDataTemplate <| Control <| ControlDataTemplate "YesNo" "No" "No" ""
 
 
 yesNoMaybe :
@@ -155,13 +193,23 @@ yesNoMaybe :
     -> Maybe Bool
     -> Html Command
 yesNoMaybe id zipper value =
-    UI.yesNoField
-        { id = id
-        , yesLabel = "Yes"
-        , noLabel = "No"
-        , value = value
-        , onChange = (YesNoMaybe_Update zipper)
-        }
+    toDataTemplate <| Control <| ControlDataTemplate "Tri-State" "Un-set / No" "Un-set / No" ""
+
+
+bulletSection : String -> String -> String
+bulletSection key title =
+    if String.contains "." key then
+        ""
+    else
+        title
+
+
+bulletValue : String -> String -> String
+bulletValue key title =
+    if String.contains "." key then
+        title
+    else
+        ""
 
 
 bullets :
@@ -171,47 +219,24 @@ bullets :
     -> List (Html Command)
     -> Html Command
 bullets id zipper title children =
-    div
-        [ styles
-            [ paddingLeft (px 15)
-            , marginTop (px 20)
-            , marginBottom (px 20)
-            , borderLeft3 (px 1) solid (rgba 128 128 128 0.1)
-            ]
-        ]
-        [ span
-            [ styles
-                [ displayFlex
-                , paddingBottom (px 5)
-                , borderBottom3 (px 1) solid (rgba 128 128 128 0.3)
-                ]
-            ]
-            [ span
-                [ styles
-                    [ paddingRight (px 10)
-                    , fontSize (Css.em 1.3)
-                    , fontWeight bold
-                    ]
-                ]
-                [ Html.text <| (bulletString zipper)
-                ]
-            , span
-                [ styles
-                    [ flex (int 1)
-                    , fontSize (Css.em 1.3)
-                    ]
-                ]
-                [ Html.text title
-                ]
-            ]
-        , div
-            [ styles
-                [ paddingTop (px 20)
-                , paddingLeft (px 10)
-                ]
-            ]
-            children
-        ]
+    let
+        key =
+            (bulletString zipper)
+    in
+        div [] <|
+            [ toDataTemplate <| Partial <| PartialDataTemplate key (bulletSection key title) (bulletValue key title) "Label" "" "" "" ]
+                ++ children
+
+
+checkboxValues : DictList String String -> String
+checkboxValues options =
+    options
+        |> DictList.toList
+        |> List.foldr
+            (\( key, value ) out ->
+                out ++ " [ " ++ key ++ " | " ++ value ++ " ]"
+            )
+            ""
 
 
 checkbox :
@@ -221,22 +246,7 @@ checkbox :
     -> Set String
     -> Html Command
 checkbox id zipper options selected =
-    UI.checkboxControl
-        { id = id
-        , values =
-            options
-                |> DictList.toList
-                |> List.map
-                    (\( key, value ) ->
-                        { key = key
-                        , value = value
-                        , checked = Set.member key selected
-                        , error = Nothing
-                        }
-                    )
-        , error = Nothing
-        , onSelect = Checkbox_Update zipper
-        }
+    toDataTemplate <| Control <| ControlDataTemplate "Checkbox" (checkboxValues options) (checkboxValues (DictList.take 1 (DictList.reverse options))) ""
 
 
 grid :
@@ -246,42 +256,7 @@ grid :
     -> List (Html Command)
     -> Html Command
 grid id zipper title children =
-    UI.FieldLabel.view
-        { id = id
-        , label = title
-        , error = False
-        , labelColorHex = Nothing
-        }
-        [ div
-            [ styles
-                [ displayFlex
-                , flex (int 1)
-                , flexDirection column
-                , display block
-                ]
-            ]
-          <|
-            List.map
-                (\child ->
-                    div
-                        [ styles
-                            [ float left
-                            , displayFlex
-                            , width (pct 50)
-                            ]
-                        ]
-                        [ span
-                            [ styles
-                                [ padding (px 10)
-                                , width (pct 100)
-                                ]
-                            ]
-                            [ child
-                            ]
-                        ]
-                )
-                children
-        ]
+    div [] children
 
 
 header :
@@ -291,25 +266,7 @@ header :
     -> List (Html Command)
     -> Html Command
 header id zipper title children =
-    UI.formControl
-        { id = id
-        , header =
-            Just
-                [ Html.text title
-                ]
-        , section =
-            Just
-                [ div
-                    [ styles
-                        [ paddingLeft (px 10)
-                        , paddingRight (px 10)
-                        ]
-                    ]
-                    children
-                ]
-        , aside = Nothing
-        , footer = Nothing
-        }
+    div [] children
 
 
 orderedList :
@@ -320,42 +277,7 @@ orderedList :
     -> List (Html Command)
     -> Html Command
 orderedList id zipper title error children =
-    UI.FieldLabel.view
-        { id = id
-        , label = title
-        , error = error
-        , labelColorHex = Nothing
-        }
-        [ div
-            [ styles
-                [ displayFlex
-                , flex (int 1)
-                , flexDirection column
-                , display block
-                ]
-            ]
-          <|
-            List.map
-                (\child ->
-                    div
-                        [ styles
-                            [ float left
-                            , displayFlex
-                            , width (pct 100)
-                            ]
-                        ]
-                        [ span
-                            [ styles
-                                [ padding (px 10)
-                                , width (pct 100)
-                                ]
-                            ]
-                            [ child
-                            ]
-                        ]
-                )
-                children
-        ]
+    div [] <| [ toDataTemplate <| Control <| ControlDataTemplate "Label" title "N/A" "" ] ++ children
 
 
 textInput :
@@ -368,22 +290,7 @@ textInput :
     -> Bool
     -> Html Command
 textInput id zipper label value placeholder labelColorHex error =
-    UI.FieldLabel.view
-        { id = id
-        , label = label
-        , error = error
-        , labelColorHex = labelColorHex
-        }
-        [ UI.Input.view
-            { id = id
-            , placeholder = placeholder
-            , inputType = UI.Input.TextField
-            , value = value
-            , error = False
-            , onInput = TextInput_Update zipper
-            , onKeyDown = KeyDown_Update zipper
-            }
-        ]
+    toDataTemplate <| Partial <| PartialDataTemplate "" "" label "TextInput" value "" placeholder
 
 
 textLabel :
@@ -395,17 +302,7 @@ textLabel :
     -> Bool
     -> Html Command
 textLabel id zipper label text labelColorHex error =
-    UI.FieldLabel.view
-        { id = id
-        , label = label
-        , error = error
-        , labelColorHex = labelColorHex
-        }
-        [ span
-            []
-            [ Html.text text
-            ]
-        ]
+    toDataTemplate <| Control <| ControlDataTemplate "TextLabel" label text ""
 
 
 bulletString :
